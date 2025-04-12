@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -129,8 +128,8 @@ const Discover = () => {
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-4">Find Mess Services Near You</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4 text-[#5C2C0C]">Find Mess Services Near You</h1>
+          <p className="text-[#8B4513] max-w-2xl mx-auto text-lg font-medium">
             Discover affordable, quality meal options near your location. Browse through available mess services and find the perfect fit for your dietary preferences and budget.
           </p>
         </div>

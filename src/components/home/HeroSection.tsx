@@ -1,16 +1,15 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-16 md:py-24 bg-messmate-beige-light">
       <div className="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-messmate-brown">
             Find Your Perfect Mess
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-messmate-brown/80">
             Connect with affordable, quality meal options near your campus. 
             MessMate helps students discover and subscribe to the best mess facilities.
           </p>
@@ -26,7 +25,7 @@ const HeroSection = () => {
               </svg>
             </Link>
             <Link 
-              to="/register-mess" 
+              to="/manage-mess" 
               className="messmate-btn-secondary flex items-center justify-center"
             >
               Register Your Mess
@@ -34,6 +33,7 @@ const HeroSection = () => {
           </div>
         </div>
         <div className="relative">
+          <div className="absolute inset-0 bg-messmate-brown/5 rounded-xl"></div>
           <img 
             src="/lovable-uploads/a7f3bc40-daa5-47c0-ba84-59ee36fb094f.png" 
             alt="Students enjoying mess food" 

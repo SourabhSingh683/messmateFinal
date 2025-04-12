@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -16,23 +15,23 @@ const Navbar = () => {
   const { user, profile, signOut } = useAuth();
 
   return (
-    <header className="border-b border-muted py-4">
+    <header className="bg-messmate-beige border-b border-messmate-brown/10 py-4 sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold text-messmate-brown flex items-center">
+        <Link to="/" className="text-2xl font-bold text-messmate-orange flex items-center">
           MessMate
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
-          <Link to="/discover" className="text-foreground hover:text-messmate-brown transition-colors">
+          <Link to="/discover" className="text-messmate-brown hover:text-messmate-orange transition-colors">
             Discover
           </Link>
-          <Link to="/how-it-works" className="text-foreground hover:text-messmate-brown transition-colors">
+          <Link to="/how-it-works" className="text-messmate-brown hover:text-messmate-orange transition-colors">
             How It Works
           </Link>
-          <Link to="/pricing" className="text-foreground hover:text-messmate-brown transition-colors">
+          <Link to="/pricing" className="text-messmate-brown hover:text-messmate-orange transition-colors">
             Pricing
           </Link>
-          <Link to="/about" className="text-foreground hover:text-messmate-brown transition-colors">
+          <Link to="/about" className="text-messmate-brown hover:text-messmate-orange transition-colors">
             About
           </Link>
         </nav>
@@ -51,14 +50,14 @@ const Navbar = () => {
 
 const GuestMenu = () => (
   <>
-    <Link to="/login" className="text-foreground hover:text-messmate-brown flex items-center gap-1">
+    <Link to="/login" className="text-messmate-brown hover:text-messmate-orange flex items-center gap-1">
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
       </svg>
       <span>Log In</span>
     </Link>
     <Link to="/signup">
-      <Button className="bg-messmate-brown hover:bg-messmate-brown-dark">
+      <Button className="bg-messmate-orange hover:bg-messmate-orange-dark text-white">
         Sign Up
       </Button>
     </Link>

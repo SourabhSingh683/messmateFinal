@@ -1,37 +1,36 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 32 56% 96%;
-    --foreground: 30 40% 25%;
+    --background: 43 41% 95%;
+    --foreground: 27 68% 32%;
 
-    --card: 32 56% 96%;
-    --card-foreground: 30 40% 25%;
+    --card: 43 41% 97%;
+    --card-foreground: 27 68% 32%;
 
-    --popover: 32 56% 96%;
-    --popover-foreground: 30 40% 25%;
+    --popover: 43 41% 97%;
+    --popover-foreground: 27 68% 32%;
 
     --primary: 27 68% 32%;
-    --primary-foreground: 32 56% 96%;
+    --primary-foreground: 43 41% 97%;
 
     --secondary: 27 40% 92%;
-    --secondary-foreground: 30 40% 25%;
+    --secondary-foreground: 27 68% 32%;
 
     --muted: 27 40% 92%;
-    --muted-foreground: 30 25% 45%;
+    --muted-foreground: 27 40% 45%;
 
     --accent: 27 40% 92%;
-    --accent-foreground: 30 40% 25%;
+    --accent-foreground: 27 68% 32%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 32 56% 96%;
+    --destructive-foreground: 43 41% 97%;
 
-    --border: 30 25% 85%;
-    --input: 30 25% 85%;
-    --ring: 30 40% 25%;
+    --border: 27 25% 85%;
+    --input: 27 25% 85%;
+    --ring: 27 68% 32%;
 
     --radius: 0.5rem;
 
@@ -91,14 +90,14 @@
   }
 
   body {
-    @apply bg-background text-foreground dark;
+    @apply bg-messmate-beige text-messmate-brown dark;
   }
 }
 
 .messmate-btn-primary {
-  @apply bg-messmate-brown text-white hover:bg-messmate-brown-dark px-6 py-2 rounded-md transition-colors duration-300 font-medium;
+  @apply bg-messmate-brown text-messmate-beige hover:bg-messmate-brown-dark px-6 py-2 rounded-md transition-colors duration-300 font-medium;
 }
 
 .messmate-btn-secondary {
-  @apply bg-white border border-messmate-brown text-messmate-brown hover:bg-secondary px-6 py-2 rounded-md transition-colors duration-300 font-medium;
+  @apply bg-messmate-beige border border-messmate-brown text-messmate-brown hover:bg-messmate-beige-dark px-6 py-2 rounded-md transition-colors duration-300 font-medium;
 }

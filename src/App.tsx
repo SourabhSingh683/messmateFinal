@@ -1,7 +1,6 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -17,6 +16,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import MessDashboard from "./pages/MessDashboard";
 import ManageMess from "./pages/ManageMess";
 import EditMess from "./pages/EditMess";
+import CreateMess from "./pages/CreateMess";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +61,15 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['mess_owner']}>
                   <ManageMess />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/create-mess" 
+              element={
+                <ProtectedRoute allowedRoles={['mess_owner']}>
+                  <CreateMess />
                 </ProtectedRoute>
               } 
             />
