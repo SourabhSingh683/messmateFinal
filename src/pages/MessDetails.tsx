@@ -68,7 +68,7 @@ const MessDetails = () => {
       if (error) throw error;
       
       if (data) {
-        setPlans(data);
+        setPlans(data as SubscriptionPlan[]);
       }
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
@@ -86,7 +86,7 @@ const MessDetails = () => {
       if (error) throw error;
       
       if (data) {
-        setSchedule(data);
+        setSchedule(data as MealSchedule[]);
       }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);

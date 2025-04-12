@@ -181,7 +181,7 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       if (error) throw error;
       
       if (data) {
-        setPlans(data);
+        setPlans(data as SubscriptionPlan[]);
       }
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
@@ -200,7 +200,7 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       if (error) throw error;
       
       if (data) {
-        setSchedule(data);
+        setSchedule(data as MealSchedule[]);
       }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
@@ -280,16 +280,19 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
         return;
       }
 
+      const planData = {
+        mess_id: messId,
+        name: values.name,
+        description: values.description,
+        duration_days: values.duration_days,
+        price: values.price,
+        is_active: values.is_active
+      };
+
       if (editPlanId) {
         const { error } = await supabase
           .from('subscription_plans')
-          .update({
-            name: values.name,
-            description: values.description,
-            duration_days: values.duration_days,
-            price: values.price,
-            is_active: values.is_active
-          })
+          .update(planData)
           .eq('id', editPlanId);
 
         if (error) throw error;
@@ -303,14 +306,7 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       } else {
         const { error } = await supabase
           .from('subscription_plans')
-          .insert({
-            mess_id: messId,
-            name: values.name,
-            description: values.description,
-            duration_days: values.duration_days,
-            price: values.price,
-            is_active: values.is_active
-          });
+          .insert(planData);
 
         if (error) throw error;
         
@@ -349,16 +345,19 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
         return;
       }
 
+      const scheduleData = {
+        mess_id: messId,
+        day_of_week: values.day_of_week,
+        meal_type: values.meal_type,
+        start_time: values.start_time,
+        end_time: values.end_time,
+        description: values.description
+      };
+
       if (editScheduleId) {
         const { error } = await supabase
           .from('meal_schedule')
-          .update({
-            day_of_week: values.day_of_week,
-            meal_type: values.meal_type,
-            start_time: values.start_time,
-            end_time: values.end_time,
-            description: values.description
-          })
+          .update(scheduleData)
           .eq('id', editScheduleId);
 
         if (error) throw error;
@@ -372,14 +371,7 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       } else {
         const { error } = await supabase
           .from('meal_schedule')
-          .insert({
-            mess_id: messId,
-            day_of_week: values.day_of_week,
-            meal_type: values.meal_type,
-            start_time: values.start_time,
-            end_time: values.end_time,
-            description: values.description
-          });
+          .insert(scheduleData);
 
         if (error) throw error;
         

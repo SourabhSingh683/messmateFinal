@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -57,15 +56,13 @@ const Discover = () => {
 
   const saveUserLocation = async (latitude: number, longitude: number) => {
     try {
-      // Since the profiles table doesn't have latitude and longitude fields in the types yet,
-      // we have to do a manual query instead
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          latitude: latitude,
-          longitude: longitude 
-        })
-        .eq('id', user?.id);
+      // We need to use a raw query to update the latitude and longitude
+      // since these fields are not in the type definitions yet
+      const { error } = await supabase.rpc('update_user_location', {
+        user_id: user?.id,
+        user_latitude: latitude,
+        user_longitude: longitude
+      });
 
       if (error) throw error;
     } catch (error: any) {
