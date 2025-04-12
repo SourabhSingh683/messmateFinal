@@ -11,6 +11,12 @@ import HowItWorks from "./pages/HowItWorks";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Discover from "./pages/Discover";
+import MessDetails from "./pages/MessDetails";
+import StudentDashboard from "./pages/StudentDashboard";
+import MessDashboard from "./pages/MessDashboard";
+import ManageMess from "./pages/ManageMess";
+import EditMess from "./pages/EditMess";
 
 const queryClient = new QueryClient();
 
@@ -27,30 +33,43 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/discover" element={<Discover />} />
+            <Route path="/mess-details/:messId" element={<MessDetails />} />
             
-            {/* Protected Routes - To be implemented */}
+            {/* Protected Student Routes */}
             <Route 
               path="/student-dashboard" 
               element={
                 <ProtectedRoute allowedRoles={['student']}>
-                  {/* <StudentDashboard /> */}
-                  <div className="container mx-auto p-8">
-                    <h1 className="text-2xl font-bold mb-4">Student Dashboard</h1>
-                    <p>This page is under construction. Coming soon!</p>
-                  </div>
+                  <StudentDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Protected Mess Owner Routes */}
+            <Route 
+              path="/mess-dashboard" 
+              element={
+                <ProtectedRoute allowedRoles={['mess_owner']}>
+                  <MessDashboard />
                 </ProtectedRoute>
               } 
             />
             
             <Route 
-              path="/mess-dashboard" 
+              path="/manage-mess" 
               element={
                 <ProtectedRoute allowedRoles={['mess_owner']}>
-                  {/* <MessDashboard /> */}
-                  <div className="container mx-auto p-8">
-                    <h1 className="text-2xl font-bold mb-4">Mess Owner Dashboard</h1>
-                    <p>This page is under construction. Coming soon!</p>
-                  </div>
+                  <ManageMess />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/edit-mess/:messId" 
+              element={
+                <ProtectedRoute allowedRoles={['mess_owner']}>
+                  <EditMess />
                 </ProtectedRoute>
               } 
             />
