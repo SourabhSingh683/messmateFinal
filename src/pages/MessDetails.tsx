@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -57,18 +58,23 @@ const MessDetails = () => {
   };
 
   const fetchPlans = async () => {
+    if (!messId) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('mess_id', messId)
-        .eq('is_active', true)
-        .order('price', { ascending: true });
-
-      if (error) throw error;
+      // Using raw fetch to retrieve data from subscription_plans which isn't in the types
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans?mess_id=eq.${messId}&is_active=eq.true&order=price.asc`,
+        {
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Content-Type": "application/json"
+          }
+        }
+      );
       
-      if (data) {
-        setPlans(data as SubscriptionPlan[]);
+      if (response.ok) {
+        const data: SubscriptionPlan[] = await response.json();
+        setPlans(data);
       }
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
@@ -76,17 +82,23 @@ const MessDetails = () => {
   };
 
   const fetchSchedule = async () => {
+    if (!messId) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('meal_schedule')
-        .select('*')
-        .eq('mess_id', messId)
-        .order('day_of_week', { ascending: true });
-
-      if (error) throw error;
+      // Using raw fetch to retrieve data from meal_schedule which isn't in the types
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule?mess_id=eq.${messId}&order=day_of_week.asc`,
+        {
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Content-Type": "application/json"
+          }
+        }
+      );
       
-      if (data) {
-        setSchedule(data as MealSchedule[]);
+      if (response.ok) {
+        const data: MealSchedule[] = await response.json();
+        setSchedule(data);
       }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
@@ -131,41 +143,55 @@ const MessDetails = () => {
     }
 
     try {
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) return;
+      if (!mess) return;
+      
+      const selectedPlan = plans.find(p => p.id === planId);
+      if (!selectedPlan) return;
 
       const { data, error } = await supabase
         .from('subscriptions')
         .insert({
-          mess_id: mess?.id as string,
+          mess_id: mess.id,
           student_id: user.id,
           start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + plan.duration_days * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active',
-          plan_id: planId
+          end_date: new Date(Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'active'
         })
         .select();
 
       if (error) throw error;
       
       if (data && data[0]) {
-        const { error: paymentError } = await supabase
-          .from('payments')
-          .insert({
-            subscription_id: data[0].id,
-            student_id: user.id,
-            mess_id: mess?.id as string,
-            amount: plan.price,
-            payment_method: 'Online Payment',
-            transaction_id: `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-          });
-
-        if (paymentError) throw paymentError;
+        // Use raw fetch for insert into payments table which isn't in the types
+        const response = await fetch(
+          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/payments`,
+          {
+            method: 'POST',
+            headers: {
+              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({
+              subscription_id: data[0].id,
+              student_id: user.id,
+              mess_id: mess.id,
+              amount: selectedPlan.price,
+              payment_method: 'Online Payment',
+              status: 'completed',
+              transaction_id: `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+            })
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to record payment');
+        }
       }
 
       toast({
         title: "Subscription successful!",
-        description: `You have successfully subscribed to ${mess?.name}`,
+        description: `You have successfully subscribed to ${mess.name}`,
       });
       
       navigate('/student-dashboard');

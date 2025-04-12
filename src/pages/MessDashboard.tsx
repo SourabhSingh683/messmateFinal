@@ -5,7 +5,14 @@ import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { MessService, SubscriptionWithDetails, PaymentWithDetails, SubscriptionPlan, MealSchedule } from '@/types/database';
+import { 
+  MessService, 
+  Subscription, 
+  SubscriptionPlan, 
+  MealSchedule, 
+  Payment 
+} from '@/types/database';
+import { MealScheduleApi, PaymentsApi, SubscriptionPlansApi } from '@/utils/supabaseRawApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,25 +20,27 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MessDashboard = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
-  const [subscriptions, setSubscriptions] = useState<SubscriptionWithDetails[]>([]);
-  const [payments, setPayments] = useState<PaymentWithDetails[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [schedule, setSchedule] = useState<MealSchedule[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMessId, setActiveMessId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [schedule, setSchedule] = useState<MealSchedule[]>([]);
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
       fetchMessServices();
+    } else {
+      navigate('/login');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (activeMessId) {
-      fetchSubscriptions();
+      fetchActiveSubscriptions();
       fetchPayments();
       fetchPlans();
       fetchSchedule();
@@ -50,7 +59,6 @@ const MessDashboard = () => {
       
       if (data) {
         setMessServices(data);
-        // Set the first mess as active if available
         if (data.length > 0) {
           setActiveMessId(data[0].id);
         }
@@ -67,7 +75,7 @@ const MessDashboard = () => {
     }
   };
 
-  const fetchSubscriptions = async () => {
+  const fetchActiveSubscriptions = async () => {
     if (!activeMessId) return;
     
     try {
@@ -75,19 +83,23 @@ const MessDashboard = () => {
         .from('subscriptions')
         .select(`
           *,
-          profiles (first_name, last_name),
-          subscription_plans (*)
+          profiles (first_name, last_name)
         `)
         .eq('mess_id', activeMessId)
-        .order('created_at', { ascending: false });
+        .eq('status', 'active');
 
       if (error) throw error;
       
       if (data) {
-        setSubscriptions(data as SubscriptionWithDetails[]);
+        setSubscriptions(data);
       }
     } catch (error: any) {
       console.error("Error fetching subscriptions:", error.message);
+      toast({
+        title: "Failed to load subscriptions",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -95,23 +107,15 @@ const MessDashboard = () => {
     if (!activeMessId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          profiles (first_name, last_name),
-          subscriptions (*)
-        `)
-        .eq('mess_id', activeMessId)
-        .order('payment_date', { ascending: false });
-
-      if (error) throw error;
-      
-      if (data) {
-        setPayments(data as PaymentWithDetails[]);
-      }
+      const payments = await PaymentsApi.getByMessId(activeMessId);
+      setPayments(payments);
     } catch (error: any) {
       console.error("Error fetching payments:", error.message);
+      toast({
+        title: "Failed to load payments",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -119,19 +123,15 @@ const MessDashboard = () => {
     if (!activeMessId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('mess_id', activeMessId)
-        .order('price', { ascending: true });
-
-      if (error) throw error;
-      
-      if (data) {
-        setPlans(data);
-      }
+      const plans = await SubscriptionPlansApi.getByMessId(activeMessId);
+      setPlans(plans);
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
+      toast({
+        title: "Failed to load subscription plans",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -139,23 +139,19 @@ const MessDashboard = () => {
     if (!activeMessId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('meal_schedule')
-        .select('*')
-        .eq('mess_id', activeMessId)
-        .order('day_of_week', { ascending: true });
-
-      if (error) throw error;
-      
-      if (data) {
-        setSchedule(data);
-      }
+      const schedule = await MealScheduleApi.getByMessId(activeMessId);
+      setSchedule(schedule);
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
+      toast({
+        title: "Failed to load meal schedule",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
-  const isSubscriptionActive = (subscription: SubscriptionWithDetails) => {
+  const isSubscriptionActive = (subscription: Subscription) => {
     return subscription.status === 'active' && 
            new Date(subscription.end_date as string) > new Date();
   };

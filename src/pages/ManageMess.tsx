@@ -171,17 +171,23 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
   };
 
   const fetchPlans = async () => {
+    if (!messId) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('mess_id', messId)
-        .order('price', { ascending: true });
-
-      if (error) throw error;
+      // Using raw fetch to retrieve data from subscription_plans which isn't in the types
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans?mess_id=eq.${messId}&order=price.asc`,
+        {
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Content-Type": "application/json"
+          }
+        }
+      );
       
-      if (data) {
-        setPlans(data as SubscriptionPlan[]);
+      if (response.ok) {
+        const data: SubscriptionPlan[] = await response.json();
+        setPlans(data);
       }
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
@@ -189,18 +195,23 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
   };
 
   const fetchSchedule = async () => {
+    if (!messId) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('meal_schedule')
-        .select('*')
-        .eq('mess_id', messId)
-        .order('day_of_week', { ascending: true })
-        .order('start_time', { ascending: true });
-
-      if (error) throw error;
+      // Using raw fetch to retrieve data from meal_schedule which isn't in the types
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule?mess_id=eq.${messId}&order=day_of_week.asc,start_time.asc`,
+        {
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Content-Type": "application/json"
+          }
+        }
+      );
       
-      if (data) {
-        setSchedule(data as MealSchedule[]);
+      if (response.ok) {
+        const data: MealSchedule[] = await response.json();
+        setSchedule(data);
       }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
@@ -221,7 +232,16 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       if (isEditing) {
         const { error } = await supabase
           .from('mess_services')
-          .update(values)
+          .update({
+            name: values.name,
+            address: values.address,
+            description: values.description || '',
+            latitude: values.latitude,
+            longitude: values.longitude,
+            price_monthly: values.price_monthly,
+            is_vegetarian: values.is_vegetarian,
+            is_non_vegetarian: values.is_non_vegetarian
+          })
           .eq('id', messId);
 
         if (error) throw error;
@@ -283,19 +303,30 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
       const planData = {
         mess_id: messId,
         name: values.name,
-        description: values.description,
+        description: values.description || '',
         duration_days: values.duration_days,
         price: values.price,
         is_active: values.is_active
       };
 
       if (editPlanId) {
-        const { error } = await supabase
-          .from('subscription_plans')
-          .update(planData)
-          .eq('id', editPlanId);
-
-        if (error) throw error;
+        // Use raw fetch for update since the table isn't in the typed schema
+        const response = await fetch(
+          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans?id=eq.${editPlanId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify(planData)
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to update subscription plan');
+        }
         
         toast({
           title: "Plan updated",
@@ -304,11 +335,23 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
         
         setEditPlanId(null);
       } else {
-        const { error } = await supabase
-          .from('subscription_plans')
-          .insert(planData);
-
-        if (error) throw error;
+        // Use raw fetch for insert since the table isn't in the typed schema
+        const response = await fetch(
+          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans`,
+          {
+            method: 'POST',
+            headers: {
+              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify(planData)
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to create subscription plan');
+        }
         
         toast({
           title: "Plan created",
@@ -351,16 +394,27 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
         meal_type: values.meal_type,
         start_time: values.start_time,
         end_time: values.end_time,
-        description: values.description
+        description: values.description || ''
       };
 
       if (editScheduleId) {
-        const { error } = await supabase
-          .from('meal_schedule')
-          .update(scheduleData)
-          .eq('id', editScheduleId);
-
-        if (error) throw error;
+        // Use raw fetch for update since the table isn't in the typed schema
+        const response = await fetch(
+          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule?id=eq.${editScheduleId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify(scheduleData)
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to update meal schedule');
+        }
         
         toast({
           title: "Schedule updated",
@@ -369,11 +423,23 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
         
         setEditScheduleId(null);
       } else {
-        const { error } = await supabase
-          .from('meal_schedule')
-          .insert(scheduleData);
-
-        if (error) throw error;
+        // Use raw fetch for insert since the table isn't in the typed schema
+        const response = await fetch(
+          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule`,
+          {
+            method: 'POST',
+            headers: {
+              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify(scheduleData)
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to create meal schedule');
+        }
         
         toast({
           title: "Schedule created",
@@ -412,12 +478,21 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
 
   const deletePlan = async (planId: string) => {
     try {
-      const { error } = await supabase
-        .from('subscription_plans')
-        .delete()
-        .eq('id', planId);
-
-      if (error) throw error;
+      // Use raw fetch for delete since the table isn't in the typed schema
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans?id=eq.${planId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Prefer": "return=minimal"
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete subscription plan');
+      }
       
       toast({
         title: "Plan deleted",
@@ -448,12 +523,21 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
 
   const deleteSchedule = async (scheduleId: string) => {
     try {
-      const { error } = await supabase
-        .from('meal_schedule')
-        .delete()
-        .eq('id', scheduleId);
-
-      if (error) throw error;
+      // Use raw fetch for delete since the table isn't in the typed schema
+      const response = await fetch(
+        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule?id=eq.${scheduleId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
+            "Prefer": "return=minimal"
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete meal schedule');
+      }
       
       toast({
         title: "Schedule deleted",
@@ -786,332 +870,4 @@ const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
                           )}
                         />
                         
-                        <div className="flex gap-2">
-                          <Button type="submit" className="flex-1">
-                            {editPlanId ? 'Update Plan' : 'Create Plan'}
-                          </Button>
-                          
-                          {editPlanId && (
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={() => {
-                                setEditPlanId(null);
-                                planForm.reset({
-                                  name: "",
-                                  description: "",
-                                  duration_days: 30,
-                                  price: 0,
-                                  is_active: true,
-                                });
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </div>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Your Subscription Plans</CardTitle>
-                    <CardDescription>
-                      Manage your existing subscription plans
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {plans.length > 0 ? (
-                      <div className="space-y-4">
-                        {plans.map((plan) => (
-                          <div key={plan.id} className="p-4 border rounded-lg">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{plan.name}</h3>
-                                <p className="text-sm text-muted-foreground">{plan.description}</p>
-                              </div>
-                              <span className={`text-xs px-2 py-1 rounded-full ${plan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                {plan.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center mt-4">
-                              <div>
-                                <p className="text-sm"><span className="font-medium">Duration:</span> {plan.duration_days} days</p>
-                                <p className="text-sm font-bold mt-1">₹{plan.price}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => editPlan(plan)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button 
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => deletePlan(plan.id)}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p>No subscription plans created yet.</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Create your first subscription plan using the form.
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-          
-          {isEditing && (
-            <TabsContent value="schedule">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{editScheduleId ? 'Edit Meal Schedule' : 'Add Meal Schedule'}</CardTitle>
-                    <CardDescription>
-                      {editScheduleId 
-                        ? 'Update a meal schedule for your mess service' 
-                        : 'Add a new meal schedule for your mess service'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...scheduleForm}>
-                      <form onSubmit={scheduleForm.handleSubmit(onScheduleSubmit)} className="space-y-6">
-                        <FormField
-                          control={scheduleForm.control}
-                          name="day_of_week"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Day of Week</FormLabel>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a day" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                                    <SelectItem key={day} value={day}>{day}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={scheduleForm.control}
-                          name="meal_type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meal Type</FormLabel>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select meal type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {['Breakfast', 'Lunch', 'Dinner'].map((type) => (
-                                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={scheduleForm.control}
-                            name="start_time"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Start Time</FormLabel>
-                                <FormControl>
-                                  <TimePicker 
-                                    value={field.value} 
-                                    onChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={scheduleForm.control}
-                            name="end_time"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>End Time</FormLabel>
-                                <FormControl>
-                                  <TimePicker 
-                                    value={field.value} 
-                                    onChange={field.onChange} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <FormField
-                          control={scheduleForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Menu details for this meal"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Describe what will be served during this meal.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="flex gap-2">
-                          <Button type="submit" className="flex-1">
-                            {editScheduleId ? 'Update Schedule' : 'Add Schedule'}
-                          </Button>
-                          
-                          {editScheduleId && (
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={() => {
-                                setEditScheduleId(null);
-                                scheduleForm.reset({
-                                  day_of_week: "",
-                                  meal_type: "",
-                                  start_time: "",
-                                  end_time: "",
-                                  description: "",
-                                });
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </div>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Meal Schedule</CardTitle>
-                    <CardDescription>
-                      Manage your weekly meal schedule
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {schedule.length > 0 ? (
-                      <Tabs defaultValue={Object.keys(scheduleByDay)[0] || 'Monday'} className="w-full">
-                        <TabsList className="mb-4 w-full justify-start overflow-auto">
-                          {daysOrder.map(day => scheduleByDay[day] && (
-                            <TabsTrigger key={day} value={day}>
-                              {day}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        
-                        {daysOrder.map(day => scheduleByDay[day] && (
-                          <TabsContent key={day} value={day}>
-                            <div className="space-y-4">
-                              {scheduleByDay[day]
-                                .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                                .map((meal) => (
-                                  <div key={meal.id} className="p-4 border rounded-lg">
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <h3 className="font-medium">{meal.meal_type}</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                          {new Date(`2000-01-01T${meal.start_time}`).toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })} - {new Date(`2000-01-01T${meal.end_time}`).toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })}
-                                        </p>
-                                        {meal.description && (
-                                          <p className="text-sm mt-2">{meal.description}</p>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <Button 
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => editSchedule(meal)}
-                                        >
-                                          Edit
-                                        </Button>
-                                        <Button 
-                                          variant="destructive"
-                                          size="sm"
-                                          onClick={() => deleteSchedule(meal.id)}
-                                        >
-                                          Delete
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))
-                              }
-                            </div>
-                          </TabsContent>
-                        ))}
-                      </Tabs>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p>No meal schedule created yet.</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Add your first meal schedule using the form.
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-        </Tabs>
-      </main>
-      <Footer />
-    </div>
-  );
-};
-
-export default ManageMess;
+                        <div className="flex gap-

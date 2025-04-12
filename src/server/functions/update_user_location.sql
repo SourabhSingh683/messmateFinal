@@ -13,7 +13,8 @@ BEGIN
   UPDATE public.profiles
   SET 
     latitude = user_latitude,
-    longitude = user_longitude
+    longitude = user_longitude,
+    updated_at = now()
   WHERE id = user_id;
 END;
 $$;

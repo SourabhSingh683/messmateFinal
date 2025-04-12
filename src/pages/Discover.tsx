@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -17,7 +18,7 @@ const Discover = () => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchMessServices();
@@ -56,8 +57,7 @@ const Discover = () => {
 
   const saveUserLocation = async (latitude: number, longitude: number) => {
     try {
-      // We need to use a raw query to update the latitude and longitude
-      // since these fields are not in the type definitions yet
+      // Use the RPC function to update user location
       const { error } = await supabase.rpc('update_user_location', {
         user_id: user?.id,
         user_latitude: latitude,

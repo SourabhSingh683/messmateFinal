@@ -17,7 +17,7 @@ export type Subscription = TableRow<'subscriptions'>;
 export type MessImage = TableRow<'mess_images'>;
 export type Review = TableRow<'reviews'>;
 
-// Define types for the new tables
+// Define types for the new tables we created
 export type Payment = {
   id: string;
   subscription_id: string;
@@ -58,7 +58,7 @@ export type MealSchedule = {
 // Custom joined types for complex queries
 export type SubscriptionWithDetails = Subscription & {
   mess_services: MessService;
-  subscription_plans: SubscriptionPlan | null;
+  subscription_plans?: SubscriptionPlan | null;
   profiles?: {
     first_name: string;
     last_name: string;
