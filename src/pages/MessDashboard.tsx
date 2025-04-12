@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -6,28 +5,16 @@ import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
+import { MessService, SubscriptionWithDetails, PaymentWithDetails, SubscriptionPlan, MealSchedule } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type MessService = Tables['mess_services'];
-type Subscription = Tables['subscriptions'] & {
-  profiles: Tables['profiles'];
-  subscription_plans: Tables['subscription_plans'] | null;
-};
-type Payment = Tables['payments'] & {
-  profiles: Tables['profiles'];
-  subscriptions: Tables['subscriptions'];
-};
-type SubscriptionPlan = Tables['subscription_plans'];
-type MealSchedule = Tables['meal_schedule'];
-
 const MessDashboard = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionWithDetails[]>([]);
+  const [payments, setPayments] = useState<PaymentWithDetails[]>([]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [schedule, setSchedule] = useState<MealSchedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +84,7 @@ const MessDashboard = () => {
       if (error) throw error;
       
       if (data) {
-        setSubscriptions(data as Subscription[]);
+        setSubscriptions(data as SubscriptionWithDetails[]);
       }
     } catch (error: any) {
       console.error("Error fetching subscriptions:", error.message);
@@ -121,7 +108,7 @@ const MessDashboard = () => {
       if (error) throw error;
       
       if (data) {
-        setPayments(data as Payment[]);
+        setPayments(data as PaymentWithDetails[]);
       }
     } catch (error: any) {
       console.error("Error fetching payments:", error.message);
@@ -168,22 +155,19 @@ const MessDashboard = () => {
     }
   };
 
-  const isSubscriptionActive = (subscription: Subscription) => {
+  const isSubscriptionActive = (subscription: SubscriptionWithDetails) => {
     return subscription.status === 'active' && 
            new Date(subscription.end_date as string) > new Date();
   };
 
-  // Calculate total revenue
   const calculateTotalRevenue = () => {
     return payments.reduce((total, payment) => total + payment.amount, 0);
   };
 
-  // Calculate current active subscribers
   const getActiveSubscribers = () => {
     return subscriptions.filter(isSubscriptionActive).length;
   };
 
-  // Get today's meal schedule
   const getTodaySchedule = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     return schedule

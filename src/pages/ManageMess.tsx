@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
+import { MessService, SubscriptionPlan, MealSchedule } from '@/types/database';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -19,10 +18,6 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimePicker } from "@/components/utils/TimePicker";
-
-type MessService = Tables['mess_services'];
-type SubscriptionPlan = Tables['subscription_plans'];
-type MealSchedule = Tables['meal_schedule'];
 
 // Form validation schemas
 const messServiceSchema = z.object({
@@ -52,11 +47,13 @@ const mealScheduleSchema = z.object({
   description: z.string().optional(),
 });
 
+interface ManageMessProps {
+  messId?: string;
+  defaultTab?: string;
+}
+
 // Component for creating or editing a mess service
-const ManageMess = () => {
-  const { messId } = useParams<{ messId: string }>();
-  const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'details';
+const ManageMess = ({ messId, defaultTab = 'details' }: ManageMessProps) => {
   const [loading, setLoading] = useState(true);
   const [messDetails, setMessDetails] = useState<MessService | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -222,7 +219,6 @@ const ManageMess = () => {
       }
 
       if (isEditing) {
-        // Update existing mess
         const { error } = await supabase
           .from('mess_services')
           .update(values)
@@ -235,11 +231,17 @@ const ManageMess = () => {
           description: "Your mess service has been updated successfully."
         });
       } else {
-        // Create new mess
         const { data, error } = await supabase
           .from('mess_services')
           .insert({
-            ...values,
+            name: values.name,
+            address: values.address,
+            description: values.description || '',
+            latitude: values.latitude,
+            longitude: values.longitude,
+            price_monthly: values.price_monthly,
+            is_vegetarian: values.is_vegetarian,
+            is_non_vegetarian: values.is_non_vegetarian,
             owner_id: user.id
           })
           .select();
@@ -251,7 +253,6 @@ const ManageMess = () => {
           description: "Your mess service has been created successfully."
         });
         
-        // Navigate to the edit page for the new mess
         if (data && data[0]) {
           navigate(`/edit-mess/${data[0].id}`);
         } else {
@@ -280,10 +281,15 @@ const ManageMess = () => {
       }
 
       if (editPlanId) {
-        // Update existing plan
         const { error } = await supabase
           .from('subscription_plans')
-          .update(values)
+          .update({
+            name: values.name,
+            description: values.description,
+            duration_days: values.duration_days,
+            price: values.price,
+            is_active: values.is_active
+          })
           .eq('id', editPlanId);
 
         if (error) throw error;
@@ -295,12 +301,15 @@ const ManageMess = () => {
         
         setEditPlanId(null);
       } else {
-        // Create new plan
         const { error } = await supabase
           .from('subscription_plans')
           .insert({
-            ...values,
-            mess_id: messId
+            mess_id: messId,
+            name: values.name,
+            description: values.description,
+            duration_days: values.duration_days,
+            price: values.price,
+            is_active: values.is_active
           });
 
         if (error) throw error;
@@ -311,7 +320,6 @@ const ManageMess = () => {
         });
       }
       
-      // Reset form and refresh plans
       planForm.reset({
         name: "",
         description: "",
@@ -342,10 +350,15 @@ const ManageMess = () => {
       }
 
       if (editScheduleId) {
-        // Update existing schedule
         const { error } = await supabase
           .from('meal_schedule')
-          .update(values)
+          .update({
+            day_of_week: values.day_of_week,
+            meal_type: values.meal_type,
+            start_time: values.start_time,
+            end_time: values.end_time,
+            description: values.description
+          })
           .eq('id', editScheduleId);
 
         if (error) throw error;
@@ -357,12 +370,15 @@ const ManageMess = () => {
         
         setEditScheduleId(null);
       } else {
-        // Create new schedule
         const { error } = await supabase
           .from('meal_schedule')
           .insert({
-            ...values,
-            mess_id: messId
+            mess_id: messId,
+            day_of_week: values.day_of_week,
+            meal_type: values.meal_type,
+            start_time: values.start_time,
+            end_time: values.end_time,
+            description: values.description
           });
 
         if (error) throw error;
@@ -373,7 +389,6 @@ const ManageMess = () => {
         });
       }
       
-      // Reset form and refresh schedule
       scheduleForm.reset({
         day_of_week: "",
         meal_type: "",
@@ -464,7 +479,6 @@ const ManageMess = () => {
     }
   };
 
-  // Group schedule by day
   const scheduleByDay: Record<string, MealSchedule[]> = {};
   const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -6,27 +5,15 @@ import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
+import { SubscriptionWithDetails, PaymentWithDetails, MealSchedule } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type Subscription = Tables['subscriptions'] & {
-  mess_services: Tables['mess_services'];
-  subscription_plans: Tables['subscription_plans'] | null;
-};
-
-type Payment = Tables['payments'] & {
-  mess_services: Tables['mess_services'];
-  subscriptions: Tables['subscriptions'];
-};
-
-type MealSchedule = Tables['meal_schedule'];
-
 const StudentDashboard = () => {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionWithDetails[]>([]);
+  const [payments, setPayments] = useState<PaymentWithDetails[]>([]);
   const [mealSchedules, setMealSchedules] = useState<Record<string, MealSchedule[]>>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -63,7 +50,7 @@ const StudentDashboard = () => {
       if (error) throw error;
       
       if (data) {
-        setSubscriptions(data as Subscription[]);
+        setSubscriptions(data as SubscriptionWithDetails[]);
       }
     } catch (error: any) {
       console.error("Error fetching subscriptions:", error.message);
@@ -92,7 +79,7 @@ const StudentDashboard = () => {
       if (error) throw error;
       
       if (data) {
-        setPayments(data as Payment[]);
+        setPayments(data as PaymentWithDetails[]);
       }
     } catch (error: any) {
       console.error("Error fetching payments:", error.message);
@@ -109,7 +96,6 @@ const StudentDashboard = () => {
       if (error) throw error;
       
       if (data) {
-        // Group schedules by mess_id
         const scheduleByMess: Record<string, MealSchedule[]> = {};
         data.forEach(item => {
           if (!scheduleByMess[item.mess_id]) {
@@ -138,7 +124,6 @@ const StudentDashboard = () => {
         description: "Your subscription has been cancelled successfully."
       });
       
-      // Refresh subscriptions
       fetchSubscriptions();
     } catch (error: any) {
       console.error("Error cancelling subscription:", error.message);
@@ -150,12 +135,12 @@ const StudentDashboard = () => {
     }
   };
 
-  const isSubscriptionActive = (subscription: Subscription) => {
+  const isSubscriptionActive = (subscription: SubscriptionWithDetails) => {
     return subscription.status === 'active' && 
            new Date(subscription.end_date as string) > new Date();
   };
 
-  const getSubscriptionTimeLeft = (subscription: Subscription) => {
+  const getSubscriptionTimeLeft = (subscription: SubscriptionWithDetails) => {
     if (!subscription.end_date) return 'No end date';
     
     const endDate = new Date(subscription.end_date);
@@ -169,7 +154,6 @@ const StudentDashboard = () => {
     return `${diffDays} days left`;
   };
 
-  // Get today's meal schedule for active subscriptions
   const getTodaySchedule = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     const activeMessIds = subscriptions

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -6,14 +5,10 @@ import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
+import { MessService, SubscriptionPlan, MealSchedule } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-type MessService = Tables['mess_services'];
-type SubscriptionPlan = Tables['subscription_plans'];
-type MealSchedule = Tables['meal_schedule'];
 
 const MessDetails = () => {
   const { messId } = useParams<{ messId: string }>();
@@ -139,7 +134,6 @@ const MessDetails = () => {
       const plan = plans.find(p => p.id === planId);
       if (!plan) return;
 
-      // Create a subscription
       const { data, error } = await supabase
         .from('subscriptions')
         .insert({
@@ -154,7 +148,6 @@ const MessDetails = () => {
 
       if (error) throw error;
       
-      // Create a payment record
       if (data && data[0]) {
         const { error: paymentError } = await supabase
           .from('payments')
@@ -214,7 +207,6 @@ const MessDetails = () => {
     );
   }
 
-  // Group schedule by day
   const scheduleByDay: Record<string, MealSchedule[]> = {};
   const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   

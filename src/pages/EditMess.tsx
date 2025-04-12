@@ -6,9 +6,9 @@ import ManageMess from './ManageMess';
 const EditMess = () => {
   const { messId } = useParams<{ messId: string }>();
   const [searchParams] = useSearchParams();
-  const tab = searchParams.get('tab');
+  const tab = searchParams.get('tab') || 'details';
 
-  return <ManageMess />;
+  return <ManageMess messId={messId} defaultTab={tab} />;
 };
 
 export default EditMess;

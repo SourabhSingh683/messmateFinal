@@ -9,9 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
-
-type MessService = Tables['mess_services'];
+import { MessService } from '@/types/database';
 
 const Discover = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
@@ -59,9 +57,14 @@ const Discover = () => {
 
   const saveUserLocation = async (latitude: number, longitude: number) => {
     try {
+      // Since the profiles table doesn't have latitude and longitude fields in the types yet,
+      // we have to do a manual query instead
       const { error } = await supabase
         .from('profiles')
-        .update({ latitude, longitude })
+        .update({ 
+          latitude: latitude,
+          longitude: longitude 
+        })
         .eq('id', user?.id);
 
       if (error) throw error;
