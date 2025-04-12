@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      meal_schedule: {
+        Row: {
+          created_at: string
+          day_of_week: string
+          description: string | null
+          end_time: string
+          id: string
+          meal_type: string
+          mess_id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: string
+          description?: string | null
+          end_time: string
+          id?: string
+          meal_type: string
+          mess_id: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          meal_type?: string
+          mess_id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_schedule_mess_id_fkey"
+            columns: ["mess_id"]
+            isOneToOne: false
+            referencedRelation: "mess_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mess_images: {
         Row: {
           created_at: string
@@ -94,6 +138,67 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          mess_id: string
+          payment_date: string
+          payment_method: string
+          status: string
+          student_id: string
+          subscription_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          mess_id: string
+          payment_date?: string
+          payment_method: string
+          status?: string
+          student_id: string
+          subscription_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mess_id?: string
+          payment_date?: string
+          payment_method?: string
+          status?: string
+          student_id?: string
+          subscription_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_mess_id_fkey"
+            columns: ["mess_id"]
+            isOneToOne: false
+            referencedRelation: "mess_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -101,6 +206,8 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          latitude: number | null
+          longitude: number | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
@@ -110,6 +217,8 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          latitude?: number | null
+          longitude?: number | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -119,6 +228,8 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          latitude?: number | null
+          longitude?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -165,6 +276,50 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          mess_id: string
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_days: number
+          id?: string
+          is_active?: boolean
+          mess_id: string
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          mess_id?: string
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_mess_id_fkey"
+            columns: ["mess_id"]
+            isOneToOne: false
+            referencedRelation: "mess_services"
             referencedColumns: ["id"]
           },
         ]
@@ -222,7 +377,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_user_location: {
+        Args: { user_id: string; user_latitude: number; user_longitude: number }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: "student" | "mess_owner"
