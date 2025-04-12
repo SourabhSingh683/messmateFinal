@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,24 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// MessMate custom colors
+				messmate: {
+					brown: {
+						DEFAULT: '#8B4513',
+						light: '#A0522D',
+						dark: '#5E2605',
+					},
+					beige: {
+						DEFAULT: '#F5F5DC',
+						light: '#FFFFF0',
+						dark: '#E8E4C9',
+					},
+					orange: {
+						DEFAULT: '#D2691E',
+						light: '#E67E22',
+						dark: '#A04000',
+					}
 				}
 			},
 			borderRadius: {
@@ -89,6 +108,9 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
+			},
+			backgroundImage: {
+				'hero-pattern': "url('/lovable-uploads/a7f3bc40-daa5-47c0-ba84-59ee36fb094f.png')"
 			}
 		}
 	},
