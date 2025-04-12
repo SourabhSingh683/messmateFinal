@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/context/AuthContext";
 import { 
   Card, 
@@ -20,7 +21,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -83,8 +83,13 @@ const mealScheduleSchema = z.object({
   description: z.string().optional(),
 });
 
-const ManageMess = () => {
-  const router = useRouter();
+interface ManageMessProps {
+  messId?: string;
+  defaultTab?: string;
+}
+
+const ManageMess: React.FC<ManageMessProps> = ({ messId, defaultTab = "subscription-plans" }) => {
+  const navigate = useNavigate();
   const { user, mess } = useAuth();
   const { toast } = useToast();
 
@@ -131,7 +136,7 @@ const ManageMess = () => {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login');
+      navigate('/login');
     }
 
     if (user && !mess) {
@@ -141,13 +146,13 @@ const ManageMess = () => {
     if (mess) {
       setLoading(false);
     }
-  }, [user, mess, router]);
+  }, [user, mess, navigate]);
 
   // API Calls
   const fetchSubscriptionPlans = async (messId: string) => {
     try {
       const plans = await SubscriptionPlansApi.getByMessId(messId);
-      setSubscriptionPlans(plans);
+      setSubscriptionPlans(plans as SubscriptionPlan[]);
     } catch (error: any) {
       toast({
         title: "Error fetching subscription plans",
@@ -160,7 +165,7 @@ const ManageMess = () => {
   const fetchMealSchedules = async (messId: string) => {
     try {
       const schedules = await MealScheduleApi.getByMessId(messId);
-      setMealSchedules(schedules);
+      setMealSchedules(schedules as MealSchedule[]);
     } catch (error: any) {
       toast({
         title: "Error fetching meal schedules",
@@ -174,7 +179,16 @@ const ManageMess = () => {
     try {
       setIsSubmittingPlan(true);
       if (!mess?.id) throw new Error("Mess ID is required");
-      await SubscriptionPlansApi.create({ ...data, mess_id: mess.id });
+      
+      await SubscriptionPlansApi.create({ 
+        mess_id: mess.id,
+        name: data.name,
+        description: data.description,
+        duration_days: data.duration_days,
+        price: data.price,
+        is_active: data.is_active 
+      });
+      
       await fetchSubscriptionPlans(mess.id);
       toast({
         title: "Subscription plan created successfully!",
@@ -195,7 +209,15 @@ const ManageMess = () => {
     try {
       setIsSubmittingPlan(true);
       if (!mess?.id) throw new Error("Mess ID is required");
-      await SubscriptionPlansApi.update(id, data);
+      
+      await SubscriptionPlansApi.update(id, {
+        name: data.name,
+        description: data.description,
+        duration_days: data.duration_days,
+        price: data.price,
+        is_active: data.is_active
+      });
+      
       await fetchSubscriptionPlans(mess.id);
       toast({
         title: "Subscription plan updated successfully!",
@@ -234,7 +256,16 @@ const ManageMess = () => {
     try {
       setIsSubmittingMeal(true);
       if (!mess?.id) throw new Error("Mess ID is required");
-      await MealScheduleApi.create({ ...data, mess_id: mess.id });
+      
+      await MealScheduleApi.create({
+        mess_id: mess.id,
+        day_of_week: data.day_of_week,
+        meal_type: data.meal_type,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        description: data.description
+      });
+      
       await fetchMealSchedules(mess.id);
       toast({
         title: "Meal schedule created successfully!",
@@ -255,7 +286,15 @@ const ManageMess = () => {
     try {
       setIsSubmittingMeal(true);
       if (!mess?.id) throw new Error("Mess ID is required");
-      await MealScheduleApi.update(id, data);
+      
+      await MealScheduleApi.update(id, {
+        day_of_week: data.day_of_week,
+        meal_type: data.meal_type,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        description: data.description
+      });
+      
       await fetchMealSchedules(mess.id);
       toast({
         title: "Meal schedule updated successfully!",
@@ -380,8 +419,11 @@ const ManageMess = () => {
                     </p>
                   </div>
                   <div>
-                    <Button variant="outline" className="w-full" onClick={() => router.push(`/edit-mess/${mess.id}`)}>
-                      <PencilIcon className="h-4 w-4 mr-2" />
+                    <Button variant="outline" className="w-full" onClick={() => navigate(`/edit-mess/${mess.id}`)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 mr-2">
+                        <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                        <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                      </svg>
                       Edit Mess Details
                     </Button>
                   </div>
@@ -389,7 +431,7 @@ const ManageMess = () => {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="subscription-plans">
+            <Tabs defaultValue={defaultTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="subscription-plans">Subscription Plans</TabsTrigger>
                 <TabsTrigger value="meal-schedule">Meal Schedule</TabsTrigger>
@@ -550,7 +592,7 @@ const ManageMess = () => {
                             <TableCell>{plan.duration_days} days</TableCell>
                             <TableCell>₹{plan.price}</TableCell>
                             <TableCell>
-                              <Badge variant={plan.is_active ? "success" : "secondary"}>
+                              <Badge variant={plan.is_active ? "secondary" : "outline"} className={plan.is_active ? "bg-green-100 text-green-800" : ""}>
                                 {plan.is_active ? 'Active' : 'Inactive'}
                               </Badge>
                             </TableCell>
@@ -560,7 +602,10 @@ const ManageMess = () => {
                                 size="icon"
                                 onClick={() => handleEditPlan(plan)}
                               >
-                                <PencilIcon className="h-4 w-4" />
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                  <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                                </svg>
                                 <span className="sr-only">Edit</span>
                               </Button>
                               <Button
@@ -568,7 +613,9 @@ const ManageMess = () => {
                                 size="icon"
                                 onClick={() => handleDeletePlan(plan.id)}
                               >
-                                <TrashIcon className="h-4 w-4" />
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                  <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 00-.5.734v.5c0 .414.336.75.75.75h13.23a.75.75 0 00.75-.75v-.5a.75.75 0 00-.5-.734c-.781-.122-1.57-.221-2.365-.298V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                                </svg>
                                 <span className="sr-only">Delete</span>
                               </Button>
                             </TableCell>
@@ -761,7 +808,10 @@ const ManageMess = () => {
                                     size="icon"
                                     onClick={() => handleEditMeal(meal)}
                                   >
-                                    <PencilIcon className="h-4 w-4" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                      <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
+                                      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
+                                    </svg>
                                     <span className="sr-only">Edit</span>
                                   </Button>
                                   <Button
@@ -769,7 +819,9 @@ const ManageMess = () => {
                                     size="icon"
                                     onClick={() => handleDeleteMeal(meal.id)}
                                   >
-                                    <TrashIcon className="h-4 w-4" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                      <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 00-.5.734v.5c0 .414.336.75.75.75h13.23a.75.75 0 00.75-.75v-.5a.75.75 0 00-.5-.734c-.781-.122-1.57-.221-2.365-.298V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                                    </svg>
                                     <span className="sr-only">Delete</span>
                                   </Button>
                                 </div>
@@ -794,7 +846,7 @@ const ManageMess = () => {
           <div className="space-y-4 text-center">
             <h2 className="text-xl font-semibold">You haven't created a mess service yet</h2>
             <p>Create your first mess service to start getting subscriptions from students.</p>
-            <Button onClick={() => router.push("/create-mess")}>Create a Mess Service</Button>
+            <Button onClick={() => navigate("/create-mess")}>Create a Mess Service</Button>
           </div>
         )}
       </main>
