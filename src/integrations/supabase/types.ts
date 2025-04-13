@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          end_date: string
+          id: string
+          mess_id: string
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          end_date: string
+          id?: string
+          mess_id: string
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          mess_id?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory_items: {
+        Row: {
+          created_at: string
+          id: string
+          mess_id: string
+          name: string
+          quantity: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mess_id: string
+          name: string
+          quantity: number
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mess_id?: string
+          name?: string
+          quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meal_schedule: {
         Row: {
           created_at: string
@@ -52,6 +115,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      menu_items: {
+        Row: {
+          created_at: string
+          day_of_week: string
+          description: string | null
+          id: string
+          is_vegetarian: boolean
+          meal_type: string
+          mess_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: string
+          description?: string | null
+          id?: string
+          is_vegetarian?: boolean
+          meal_type: string
+          mess_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: string
+          description?: string | null
+          id?: string
+          is_vegetarian?: boolean
+          meal_type?: string
+          mess_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       mess_images: {
         Row: {

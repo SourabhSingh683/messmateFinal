@@ -33,7 +33,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package } from "lucide-react";
 import { InventoryItem } from "@/types/database";
 
 interface InventoryManagementProps {
@@ -51,6 +51,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -86,7 +87,6 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     try {
       setLoading(true);
       const data = await InventoryItemsApi.getByMessId(messId);
-      
       setInventory(data as InventoryItem[] || []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
@@ -105,9 +105,9 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       if (editingItem) {
         // Update existing item
         await InventoryItemsApi.update(editingItem.id, {
-          p_name: values.name,
-          p_quantity: values.quantity,
-          p_unit: values.unit
+          name: values.name,
+          quantity: values.quantity,
+          unit: values.unit
         });
 
         toast({
@@ -117,10 +117,10 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       } else {
         // Create new item
         await InventoryItemsApi.create({
-          p_name: values.name,
-          p_quantity: values.quantity,
-          p_unit: values.unit,
-          p_mess_id: messId
+          mess_id: messId,
+          name: values.name,
+          quantity: values.quantity,
+          unit: values.unit
         });
 
         toast({
@@ -163,6 +163,11 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     }
   };
 
+  const filteredInventory = inventory.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.unit.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center p-4">
@@ -174,20 +179,26 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Inventory Items</h2>
+        <div className="flex items-center space-x-2">
+          <Package className="h-5 w-5" />
+          <h2 className="text-xl font-semibold dark:text-white">Inventory Items</h2>
+        </div>
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingItem(null)}>
+            <Button 
+              onClick={() => setEditingItem(null)}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Item
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editingItem ? "Edit Inventory Item" : "Add Inventory Item"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="dark:text-gray-400">
                 Enter the details for the inventory item
               </DialogDescription>
             </DialogHeader>
@@ -198,50 +209,58 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Item Name</FormLabel>
+                      <FormLabel className="dark:text-gray-300">Item Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Rice, Flour, etc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          {...field}
+                        <Input 
+                          placeholder="Rice, Flour, etc." 
+                          {...field} 
+                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="kg, liters, pieces"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="dark:text-gray-300">Quantity</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            {...field}
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="dark:text-gray-300">Unit</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="kg, liters, pieces"
+                            {...field}
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <DialogFooter>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
                     {editingItem ? "Update" : "Add"} Item
                   </Button>
                 </DialogFooter>
@@ -251,48 +270,70 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
         </Dialog>
       </div>
 
-      {inventory.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inventory.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.unit}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingItem(item);
-                      setOpenDialog(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search inventory items..."
+            className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {filteredInventory.length > 0 ? (
+        <div className="rounded-md border dark:border-gray-700 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50 dark:bg-gray-700">
+              <TableRow>
+                <TableHead className="dark:text-gray-300">Item Name</TableHead>
+                <TableHead className="dark:text-gray-300">Quantity</TableHead>
+                <TableHead className="dark:text-gray-300">Unit</TableHead>
+                <TableHead className="text-right dark:text-gray-300">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="dark:bg-gray-800">
+              {filteredInventory.map((item) => (
+                <TableRow key={item.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
+                  <TableCell className="dark:text-gray-300">{item.name}</TableCell>
+                  <TableCell className="dark:text-gray-300">{item.quantity}</TableCell>
+                  <TableCell className="dark:text-gray-300">{item.unit}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingItem(item);
+                        setOpenDialog(true);
+                      }}
+                      className="dark:text-gray-300 dark:hover:bg-gray-600"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(item.id)}
+                      className="dark:text-gray-300 dark:hover:bg-gray-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
-        <div className="text-center p-4 border rounded-md">
-          <p>No inventory items found. Add your first item to get started.</p>
+        <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
+          <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="font-medium">No inventory items found.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {searchQuery ? "Try different search terms or " : ""}
+            Add your first item to get started.
+          </p>
         </div>
       )}
     </div>

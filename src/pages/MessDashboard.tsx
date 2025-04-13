@@ -10,13 +10,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import CustomerManagement from "@/components/mess-dashboard/CustomerManagement";
 import InventoryManagement from "@/components/mess-dashboard/InventoryManagement";
 import MenuManagement from "@/components/mess-dashboard/MenuManagement";
 import FeedbackSection from "@/components/mess-dashboard/FeedbackSection";
 import AnnouncementSection from "@/components/mess-dashboard/AnnouncementSection";
 import SubscriptionPlansSection from "@/components/mess-dashboard/SubscriptionPlansSection";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Users, 
   Package, 
@@ -60,7 +61,7 @@ const MessDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen dark:bg-gray-900">
         <Spinner className="h-8 w-8" />
       </div>
     );
@@ -68,7 +69,7 @@ const MessDashboard = () => {
 
   if (!messService) {
     return (
-      <div className="container mx-auto p-8 text-center">
+      <div className="container mx-auto p-8 text-center dark:bg-gray-900 dark:text-white min-h-screen">
         <h1 className="text-2xl font-bold mb-4">You don't have a mess service yet</h1>
         <p className="mb-8">Create your mess service to access the dashboard features.</p>
         <button
@@ -82,8 +83,11 @@ const MessDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-8 text-center">Mess Owner Dashboard</h1>
+    <div className="container mx-auto p-4 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold dark:text-white">Mess Owner Dashboard</h1>
+        <ThemeToggle />
+      </div>
       
       <Tabs defaultValue="customers" className="w-full">
         <TabsList className="grid grid-cols-6 mb-8">
@@ -113,11 +117,15 @@ const MessDashboard = () => {
           </TabsTrigger>
         </TabsList>
 
-        <Card>
+        <Card className="border border-muted shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>
-              {messService.name} - Mess Management
+            <CardTitle className="text-2xl font-bold dark:text-white flex items-center gap-2">
+              {messService.name}
+              <span className="text-sm font-normal text-muted-foreground dark:text-gray-400">Mess Management</span>
             </CardTitle>
+            <CardDescription className="dark:text-gray-400">
+              Manage your mess services, inventory, menu, and more
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <TabsContent value="customers">

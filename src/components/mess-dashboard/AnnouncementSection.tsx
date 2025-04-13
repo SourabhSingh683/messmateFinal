@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { AnnouncementsApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
@@ -38,7 +39,8 @@ import {
   Edit, 
   Trash2, 
   Megaphone,
-  CalendarDays
+  CalendarDays,
+  Search
 } from "lucide-react";
 import { Announcement } from "@/types/database";
 
@@ -58,6 +60,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -104,7 +107,6 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     try {
       setLoading(true);
       const data = await AnnouncementsApi.getByMessId(messId);
-
       setAnnouncements(data as Announcement[] || []);
     } catch (error) {
       console.error("Error fetching announcements:", error);
@@ -123,10 +125,10 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       if (editingAnnouncement) {
         // Update existing announcement
         await AnnouncementsApi.update(editingAnnouncement.id, {
-          p_title: values.title,
-          p_content: values.content,
-          p_start_date: values.start_date,
-          p_end_date: values.end_date
+          title: values.title,
+          content: values.content,
+          start_date: values.start_date,
+          end_date: values.end_date
         });
 
         toast({
@@ -136,11 +138,11 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       } else {
         // Create new announcement
         await AnnouncementsApi.create({
-          p_title: values.title,
-          p_content: values.content,
-          p_start_date: values.start_date,
-          p_end_date: values.end_date,
-          p_mess_id: messId
+          mess_id: messId,
+          title: values.title,
+          content: values.content,
+          start_date: values.start_date,
+          end_date: values.end_date
         });
 
         toast({
@@ -190,6 +192,11 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     );
   };
 
+  const filteredAnnouncements = announcements.filter(announcement => 
+    announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    announcement.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center p-4">
@@ -203,21 +210,24 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Megaphone className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Announcements</h2>
+          <h2 className="text-xl font-semibold dark:text-white">Announcements</h2>
         </div>
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingAnnouncement(null)}>
+            <Button 
+              onClick={() => setEditingAnnouncement(null)}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Announcement
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="dark:text-gray-400">
                 Create announcements for your customers
               </DialogDescription>
             </DialogHeader>
@@ -228,9 +238,13 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel className="dark:text-gray-300">Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Holiday Notice, Special Menu, etc." {...field} />
+                        <Input 
+                          placeholder="Holiday Notice, Special Menu, etc." 
+                          {...field} 
+                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -241,11 +255,11 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
                   name="content"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Content</FormLabel>
+                      <FormLabel className="dark:text-gray-300">Content</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Enter announcement details here..."
-                          className="min-h-[100px]"
+                          className="min-h-[100px] dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           {...field}
                         />
                       </FormControl>
@@ -259,9 +273,13 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
                     name="start_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Start Date</FormLabel>
+                        <FormLabel className="dark:text-gray-300">Start Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -272,9 +290,13 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
                     name="end_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Date</FormLabel>
+                        <FormLabel className="dark:text-gray-300">End Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -282,7 +304,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
                     {editingAnnouncement ? "Update" : "Create"} Announcement
                   </Button>
                 </DialogFooter>
@@ -292,75 +314,97 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
         </Dialog>
       </div>
 
-      {announcements.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Content</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {announcements.map((announcement) => (
-              <TableRow key={announcement.id}>
-                <TableCell className="font-medium">{announcement.title}</TableCell>
-                <TableCell className="max-w-[300px] truncate">
-                  {announcement.content}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-1">
-                    <CalendarDays className="h-3 w-3" />
-                    <span>
-                      {new Date(announcement.start_date).toLocaleDateString()} - {new Date(announcement.end_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      isActive(announcement.start_date, announcement.end_date)
-                        ? "bg-green-100 text-green-800"
-                        : new Date(announcement.start_date) > new Date()
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {isActive(announcement.start_date, announcement.end_date)
-                      ? "Active"
-                      : new Date(announcement.start_date) > new Date()
-                      ? "Upcoming"
-                      : "Expired"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingAnnouncement(announcement);
-                      setOpenDialog(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(announcement.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search announcements..."
+            className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {filteredAnnouncements.length > 0 ? (
+        <div className="rounded-md border dark:border-gray-700 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50 dark:bg-gray-700">
+              <TableRow>
+                <TableHead className="dark:text-gray-300">Title</TableHead>
+                <TableHead className="dark:text-gray-300">Content</TableHead>
+                <TableHead className="dark:text-gray-300">Duration</TableHead>
+                <TableHead className="dark:text-gray-300">Status</TableHead>
+                <TableHead className="text-right dark:text-gray-300">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="dark:bg-gray-800">
+              {filteredAnnouncements.map((announcement) => (
+                <TableRow key={announcement.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
+                  <TableCell className="font-medium dark:text-gray-300">{announcement.title}</TableCell>
+                  <TableCell className="max-w-[300px] truncate dark:text-gray-300">
+                    {announcement.content}
+                  </TableCell>
+                  <TableCell className="dark:text-gray-300">
+                    <div className="flex items-center space-x-1">
+                      <CalendarDays className="h-3 w-3" />
+                      <span>
+                        {new Date(announcement.start_date).toLocaleDateString()} - {new Date(announcement.end_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        isActive(announcement.start_date, announcement.end_date)
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                          : new Date(announcement.start_date) > new Date()
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {isActive(announcement.start_date, announcement.end_date)
+                        ? "Active"
+                        : new Date(announcement.start_date) > new Date()
+                        ? "Upcoming"
+                        : "Expired"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingAnnouncement(announcement);
+                        setOpenDialog(true);
+                      }}
+                      className="dark:text-gray-300 dark:hover:bg-gray-600"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(announcement.id)}
+                      className="dark:text-gray-300 dark:hover:bg-gray-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
-        <div className="text-center p-8 border rounded-md">
-          <p>No announcements yet. Create an announcement to inform your customers.</p>
+        <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
+          <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="font-medium">No announcements yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {searchQuery ? "Try different search terms or " : ""}
+            Create an announcement to inform your customers.
+          </p>
         </div>
       )}
     </div>

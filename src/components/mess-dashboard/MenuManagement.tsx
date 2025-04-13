@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { MenuItemsApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,7 +37,9 @@ import {
   Plus, 
   Edit, 
   Trash2,
-  CalendarDays
+  CalendarDays,
+  Utensils,
+  Search
 } from "lucide-react";
 import {
   Select,
@@ -84,6 +87,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     day: "Monday",
     meal: "Breakfast",
   });
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -125,7 +129,6 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     try {
       setLoading(true);
       const data = await MenuItemsApi.getByMessId(messId);
-
       setMenuItems(data as MenuItem[] || []);
     } catch (error) {
       console.error("Error fetching menu items:", error);
@@ -144,11 +147,11 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       if (editingItem) {
         // Update existing item
         await MenuItemsApi.update(editingItem.id, {
-          p_name: values.name,
-          p_description: values.description,
-          p_day_of_week: values.day_of_week,
-          p_meal_type: values.meal_type,
-          p_is_vegetarian: values.is_vegetarian
+          name: values.name,
+          description: values.description,
+          day_of_week: values.day_of_week,
+          meal_type: values.meal_type,
+          is_vegetarian: values.is_vegetarian
         });
 
         toast({
@@ -158,12 +161,12 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       } else {
         // Create new item
         await MenuItemsApi.create({
-          p_name: values.name,
-          p_description: values.description,
-          p_day_of_week: values.day_of_week,
-          p_meal_type: values.meal_type,
-          p_is_vegetarian: values.is_vegetarian,
-          p_mess_id: messId
+          mess_id: messId,
+          name: values.name,
+          description: values.description,
+          day_of_week: values.day_of_week,
+          meal_type: values.meal_type,
+          is_vegetarian: values.is_vegetarian
         });
 
         toast({
@@ -206,11 +209,18 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     }
   };
 
-  const filteredItems = menuItems.filter(
-    (item) =>
-      item.day_of_week === currentView.day && 
-      item.meal_type === currentView.meal
+  const allFilteredItems = menuItems.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const filteredItems = searchQuery 
+    ? allFilteredItems 
+    : menuItems.filter(
+        (item) =>
+          item.day_of_week === currentView.day && 
+          item.meal_type === currentView.meal
+      );
 
   if (loading) {
     return (
@@ -224,53 +234,25 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <CalendarDays className="h-5 w-5" />
-          <div className="flex items-center space-x-2">
-            <Select 
-              value={currentView.day} 
-              onValueChange={(day) => setCurrentView({...currentView, day})}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Day" />
-              </SelectTrigger>
-              <SelectContent>
-                {daysOfWeek.map((day) => (
-                  <SelectItem key={day} value={day}>
-                    {day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select 
-              value={currentView.meal} 
-              onValueChange={(meal) => setCurrentView({...currentView, meal})}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Meal" />
-              </SelectTrigger>
-              <SelectContent>
-                {mealTypes.map((meal) => (
-                  <SelectItem key={meal} value={meal}>
-                    {meal}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Utensils className="h-5 w-5" />
+          <h2 className="text-xl font-semibold dark:text-white">Menu Management</h2>
         </div>
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingItem(null)}>
+            <Button 
+              onClick={() => setEditingItem(null)}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Menu Item
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 {editingItem ? "Edit Menu Item" : "Add Menu Item"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="dark:text-gray-400">
                 Enter the details for the menu item
               </DialogDescription>
             </DialogHeader>
@@ -281,9 +263,13 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Item Name</FormLabel>
+                      <FormLabel className="dark:text-gray-300">Item Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Paneer Butter Masala, Dal, etc." {...field} />
+                        <Input 
+                          placeholder="Paneer Butter Masala, Dal, etc." 
+                          {...field} 
+                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -294,12 +280,13 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description (optional)</FormLabel>
+                      <FormLabel className="dark:text-gray-300">Description (optional)</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="Add any special notes about the dish"
-                          className="resize-none"
+                          className="resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           {...field} 
+                          value={field.value || ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -312,19 +299,19 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
                     name="day_of_week"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Day of Week</FormLabel>
+                        <FormLabel className="dark:text-gray-300">Day of Week</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                               <SelectValue placeholder="Select day" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                             {daysOfWeek.map((day) => (
-                              <SelectItem key={day} value={day}>
+                              <SelectItem key={day} value={day} className="dark:text-white dark:focus:bg-gray-700">
                                 {day}
                               </SelectItem>
                             ))}
@@ -339,19 +326,19 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
                     name="meal_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Meal Type</FormLabel>
+                        <FormLabel className="dark:text-gray-300">Meal Type</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                               <SelectValue placeholder="Select meal" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                             {mealTypes.map((meal) => (
-                              <SelectItem key={meal} value={meal}>
+                              <SelectItem key={meal} value={meal} className="dark:text-white dark:focus:bg-gray-700">
                                 {meal}
                               </SelectItem>
                             ))}
@@ -366,23 +353,26 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
                   control={form.control}
                   name="is_vegetarian"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 dark:border-gray-700 dark:bg-gray-800/50">
                       <FormControl>
                         <input
                           type="checkbox"
                           checked={field.value}
                           onChange={field.onChange}
-                          className="h-4 w-4 rounded border-gray-300"
+                          className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Vegetarian</FormLabel>
+                        <FormLabel className="dark:text-gray-300">Vegetarian</FormLabel>
+                        <p className="text-sm text-muted-foreground dark:text-gray-400">
+                          Mark this item as vegetarian
+                        </p>
                       </div>
                     </FormItem>
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
                     {editingItem ? "Update" : "Add"} Menu Item
                   </Button>
                 </DialogFooter>
@@ -392,67 +382,141 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
         </Dialog>
       </div>
 
-      <div>
-        <h3 className="text-lg font-medium mb-2">
-          {currentView.day} - {currentView.meal}
-        </h3>
-        {filteredItems.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.description || "-"}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        item.is_vegetarian
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {item.is_vegetarian ? "Veg" : "Non-Veg"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditingItem(item);
-                        setOpenDialog(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center p-8 border rounded-md">
-            <p>No menu items found for {currentView.day} - {currentView.meal}.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Click "Add Menu Item" to create your first item.
-            </p>
+      <div className="grid gap-4 md:grid-cols-[1fr_1fr] lg:grid-cols-[1fr_2fr]">
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search menu items..."
+              className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        )}
+          {!searchQuery && (
+            <div className="grid gap-2">
+              <div>
+                <h3 className="text-sm font-medium leading-none dark:text-gray-300 mb-2">Day of Week</h3>
+                <Select 
+                  value={currentView.day} 
+                  onValueChange={(day) => setCurrentView({...currentView, day})}
+                >
+                  <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <SelectValue placeholder="Day" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                    {daysOfWeek.map((day) => (
+                      <SelectItem key={day} value={day} className="dark:text-white dark:focus:bg-gray-700">
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium leading-none dark:text-gray-300 mb-2">Meal Type</h3>
+                <Select 
+                  value={currentView.meal} 
+                  onValueChange={(meal) => setCurrentView({...currentView, meal})}
+                >
+                  <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <SelectValue placeholder="Meal" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                    {mealTypes.map((meal) => (
+                      <SelectItem key={meal} value={meal} className="dark:text-white dark:focus:bg-gray-700">
+                        {meal}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-3 dark:text-white flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            {searchQuery ? "Search Results" : `${currentView.day} - ${currentView.meal}`}
+          </h3>
+          {filteredItems.length > 0 ? (
+            <div className="rounded-md border dark:border-gray-700 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50 dark:bg-gray-700">
+                  <TableRow>
+                    <TableHead className="dark:text-gray-300">Item Name</TableHead>
+                    {searchQuery && (
+                      <>
+                        <TableHead className="dark:text-gray-300">Day</TableHead>
+                        <TableHead className="dark:text-gray-300">Meal</TableHead>
+                      </>
+                    )}
+                    <TableHead className="dark:text-gray-300">Description</TableHead>
+                    <TableHead className="dark:text-gray-300">Type</TableHead>
+                    <TableHead className="text-right dark:text-gray-300">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="dark:bg-gray-800">
+                  {filteredItems.map((item) => (
+                    <TableRow key={item.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
+                      <TableCell className="dark:text-gray-300 font-medium">{item.name}</TableCell>
+                      {searchQuery && (
+                        <>
+                          <TableCell className="dark:text-gray-300">{item.day_of_week}</TableCell>
+                          <TableCell className="dark:text-gray-300">{item.meal_type}</TableCell>
+                        </>
+                      )}
+                      <TableCell className="dark:text-gray-300">{item.description || "-"}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            item.is_vegetarian
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                          }`}
+                        >
+                          {item.is_vegetarian ? "Veg" : "Non-Veg"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setOpenDialog(true);
+                          }}
+                          className="dark:text-gray-300 dark:hover:bg-gray-600"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(item.id)}
+                          className="dark:text-gray-300 dark:hover:bg-gray-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
+              <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="font-medium">No menu items found {!searchQuery && `for ${currentView.day} - ${currentView.meal}`}.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {searchQuery ? "Try different search terms or " : ""}
+                Click "Add Menu Item" to create your first item.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -111,81 +111,78 @@ export const PaymentsApi = {
     })
 };
 
-// New APIs for custom tables
+// Direct API for custom tables
 export const AnnouncementsApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_announcements?p_mess_id=${messId}`),
+    fetchFromSupabase<any[]>(`/rest/v1/announcements?mess_id=eq.${messId}&order=created_at.desc`),
   
   create: (data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/create_announcement`, {
+    fetchFromSupabase<any>(`/rest/v1/announcements`, {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   update: (id: string, data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/update_announcement`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id, ...data }),
+    fetchFromSupabase<any>(`/rest/v1/announcements?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   delete: (id: string) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/delete_announcement`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id }),
+    fetchFromSupabase<any>(`/rest/v1/announcements?id=eq.${id}`, {
+      method: 'DELETE',
       headers: { "Prefer": "return=minimal" }
     })
 };
 
 export const InventoryItemsApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_inventory_items?p_mess_id=${messId}`),
+    fetchFromSupabase<any[]>(`/rest/v1/inventory_items?mess_id=eq.${messId}&order=name.asc`),
   
   create: (data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/create_inventory_item`, {
+    fetchFromSupabase<any>(`/rest/v1/inventory_items`, {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   update: (id: string, data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/update_inventory_item`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id, ...data }),
+    fetchFromSupabase<any>(`/rest/v1/inventory_items?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   delete: (id: string) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/delete_inventory_item`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id }),
+    fetchFromSupabase<any>(`/rest/v1/inventory_items?id=eq.${id}`, {
+      method: 'DELETE',
       headers: { "Prefer": "return=minimal" }
     })
 };
 
 export const MenuItemsApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_menu_items?p_mess_id=${messId}`),
+    fetchFromSupabase<any[]>(`/rest/v1/menu_items?mess_id=eq.${messId}&order=day_of_week.asc,meal_type.asc`),
   
   create: (data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/create_menu_item`, {
+    fetchFromSupabase<any>(`/rest/v1/menu_items`, {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   update: (id: string, data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/update_menu_item`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id, ...data }),
+    fetchFromSupabase<any>(`/rest/v1/menu_items?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
       headers: { "Prefer": "return=minimal" }
     }),
   
   delete: (id: string) => 
-    fetchFromSupabase<any>(`/rest/v1/rpc/delete_menu_item`, {
-      method: 'POST',
-      body: JSON.stringify({ p_id: id }),
+    fetchFromSupabase<any>(`/rest/v1/menu_items?id=eq.${id}`, {
+      method: 'DELETE',
       headers: { "Prefer": "return=minimal" }
     })
 };
