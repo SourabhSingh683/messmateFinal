@@ -175,7 +175,6 @@ const ManageMess = () => {
     }
   }, [user, messService, navigate]);
 
-  // API Calls
   const fetchSubscriptionPlans = async (messId: string) => {
     try {
       const plans = await SubscriptionPlansApi.getByMessId(messId);
@@ -356,7 +355,6 @@ const ManageMess = () => {
     }
   };
 
-  // Form Handlers
   const onSubmitSubscriptionPlan = async (data: z.infer<typeof subscriptionPlanSchema>) => {
     if (editingPlan) {
       await updateSubscriptionPlan(editingPlan.id, data);
@@ -373,7 +371,6 @@ const ManageMess = () => {
     }
   };
 
-  // Helper Functions
   const handleEditPlan = (plan: SubscriptionPlan) => {
     setEditingPlan(plan);
     subForm.setValue("name", plan.name);

@@ -1,5 +1,9 @@
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Badge } from '../components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { SubscriptionPlan, MealSchedule } from '@/types/database';
 
 interface Subscription {
   id: string;
@@ -25,9 +29,51 @@ interface Payment {
   };
 }
 
-const MessDashboard: React.FC = () => {
-  const [subscriptions, setSubscriptions] = React.useState<Subscription[]>([]);
-  const [payments, setPayments] = React.useState<Payment[]>([]);
+const MessDashboard = () => {
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    try {
+      // Just placeholder data for now until API is working
+      setSubscriptions([
+        {
+          id: '1',
+          status: 'active',
+          profiles: {
+            first_name: 'John',
+            last_name: 'Doe'
+          },
+          subscription_plans: {
+            name: 'Monthly Plan'
+          }
+        }
+      ]);
+      
+      setPayments([
+        {
+          id: '1',
+          amount: 2000,
+          payment_date: '2025-04-10',
+          payment_method: 'UPI',
+          status: 'completed',
+          profiles: {
+            first_name: 'John',
+            last_name: 'Doe'
+          }
+        }
+      ]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
   // Fix the profiles reference in subscriptions display
   const renderSubscribersList = () => {
