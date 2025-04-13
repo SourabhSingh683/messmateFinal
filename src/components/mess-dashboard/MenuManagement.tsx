@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { MenuItemsApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import {
@@ -125,14 +124,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_menu_items', {
-          p_mess_id: messId
-        });
-
-      if (error) {
-        throw error;
-      }
+      const data = await MenuItemsApi.getByMessId(messId);
 
       setMenuItems(data as MenuItem[] || []);
     } catch (error) {
@@ -151,34 +143,29 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     try {
       if (editingItem) {
         // Update existing item
-        const { error } = await supabase
-          .rpc('update_menu_item', {
-            p_id: editingItem.id,
-            p_name: values.name,
-            p_description: values.description,
-            p_day_of_week: values.day_of_week,
-            p_meal_type: values.meal_type,
-            p_is_vegetarian: values.is_vegetarian
-          });
+        await MenuItemsApi.update(editingItem.id, {
+          p_name: values.name,
+          p_description: values.description,
+          p_day_of_week: values.day_of_week,
+          p_meal_type: values.meal_type,
+          p_is_vegetarian: values.is_vegetarian
+        });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Menu item updated successfully",
         });
       } else {
         // Create new item
-        const { error } = await supabase
-          .rpc('create_menu_item', {
-            p_name: values.name,
-            p_description: values.description,
-            p_day_of_week: values.day_of_week,
-            p_meal_type: values.meal_type,
-            p_is_vegetarian: values.is_vegetarian,
-            p_mess_id: messId
-          });
+        await MenuItemsApi.create({
+          p_name: values.name,
+          p_description: values.description,
+          p_day_of_week: values.day_of_week,
+          p_meal_type: values.meal_type,
+          p_is_vegetarian: values.is_vegetarian,
+          p_mess_id: messId
+        });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Menu item added successfully",
@@ -202,12 +189,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this menu item?")) {
       try {
-        const { error } = await supabase
-          .rpc('delete_menu_item', {
-            p_id: id
-          });
-
-        if (error) throw error;
+        await MenuItemsApi.delete(id);
         fetchMenuItems();
         toast({
           title: "Success",

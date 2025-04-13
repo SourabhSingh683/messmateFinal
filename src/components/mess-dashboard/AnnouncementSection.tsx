@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { AnnouncementsApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,15 +103,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_announcements', {
-          p_mess_id: messId
-        })
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
+      const data = await AnnouncementsApi.getByMessId(messId);
 
       setAnnouncements(data as Announcement[] || []);
     } catch (error) {
@@ -131,22 +122,20 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     try {
       if (editingAnnouncement) {
         // Update existing announcement
-        const { error } = await supabase.rpc('update_announcement', {
-          p_id: editingAnnouncement.id,
+        await AnnouncementsApi.update(editingAnnouncement.id, {
           p_title: values.title,
           p_content: values.content,
           p_start_date: values.start_date,
           p_end_date: values.end_date
         });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Announcement updated successfully",
         });
       } else {
         // Create new announcement
-        const { error } = await supabase.rpc('create_announcement', {
+        await AnnouncementsApi.create({
           p_title: values.title,
           p_content: values.content,
           p_start_date: values.start_date,
@@ -154,7 +143,6 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
           p_mess_id: messId
         });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Announcement created successfully",
@@ -178,11 +166,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this announcement?")) {
       try {
-        const { error } = await supabase.rpc('delete_announcement', {
-          p_id: id
-        });
-
-        if (error) throw error;
+        await AnnouncementsApi.delete(id);
         fetchAnnouncements();
         toast({
           title: "Success",

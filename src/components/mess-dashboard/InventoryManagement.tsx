@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { InventoryItemsApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,16 +85,8 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_inventory_items', {
-          p_mess_id: messId
-        })
-        .order('name');
-
-      if (error) {
-        throw error;
-      }
-
+      const data = await InventoryItemsApi.getByMessId(messId);
+      
       setInventory(data as InventoryItem[] || []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
@@ -112,30 +104,25 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     try {
       if (editingItem) {
         // Update existing item
-        const { error } = await supabase
-          .rpc('update_inventory_item', {
-            p_id: editingItem.id,
-            p_name: values.name,
-            p_quantity: values.quantity,
-            p_unit: values.unit
-          });
+        await InventoryItemsApi.update(editingItem.id, {
+          p_name: values.name,
+          p_quantity: values.quantity,
+          p_unit: values.unit
+        });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Inventory item updated successfully",
         });
       } else {
         // Create new item
-        const { error } = await supabase
-          .rpc('create_inventory_item', {
-            p_name: values.name,
-            p_quantity: values.quantity,
-            p_unit: values.unit,
-            p_mess_id: messId
-          });
+        await InventoryItemsApi.create({
+          p_name: values.name,
+          p_quantity: values.quantity,
+          p_unit: values.unit,
+          p_mess_id: messId
+        });
 
-        if (error) throw error;
         toast({
           title: "Success",
           description: "Inventory item added successfully",
@@ -159,12 +146,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
-        const { error } = await supabase
-          .rpc('delete_inventory_item', {
-            p_id: id
-          });
-
-        if (error) throw error;
+        await InventoryItemsApi.delete(id);
         fetchInventory();
         toast({
           title: "Success",
