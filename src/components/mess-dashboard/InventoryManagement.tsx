@@ -94,7 +94,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("inventory_items")
+        .from("inventory_items" as any)
         .select("*")
         .eq("mess_id", messId)
         .order("name");
@@ -121,7 +121,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("inventory_items")
+          .from("inventory_items" as any)
           .update({
             name: values.name,
             quantity: values.quantity,
@@ -136,12 +136,14 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
         });
       } else {
         // Create new item
-        const { error } = await supabase.from("inventory_items").insert({
-          name: values.name,
-          quantity: values.quantity,
-          unit: values.unit,
-          mess_id: messId,
-        });
+        const { error } = await supabase
+          .from("inventory_items" as any)
+          .insert({
+            name: values.name,
+            quantity: values.quantity,
+            unit: values.unit,
+            mess_id: messId,
+          });
 
         if (error) throw error;
         toast({
@@ -168,7 +170,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
         const { error } = await supabase
-          .from("inventory_items")
+          .from("inventory_items" as any)
           .delete()
           .eq("id", id);
 

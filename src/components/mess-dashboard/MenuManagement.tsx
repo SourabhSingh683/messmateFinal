@@ -51,11 +51,12 @@ import { Textarea } from "@/components/ui/textarea";
 interface MenuItem {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   day_of_week: string;
   meal_type: string;
   is_vegetarian: boolean;
   mess_id: string;
+  created_at: string;
 }
 
 interface MenuManagementProps {
@@ -135,7 +136,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("menu_items")
+        .from("menu_items" as any)
         .select("*")
         .eq("mess_id", messId);
 
@@ -161,7 +162,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("menu_items")
+          .from("menu_items" as any)
           .update({
             name: values.name,
             description: values.description,
@@ -178,14 +179,16 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
         });
       } else {
         // Create new item
-        const { error } = await supabase.from("menu_items").insert({
-          name: values.name,
-          description: values.description,
-          day_of_week: values.day_of_week,
-          meal_type: values.meal_type,
-          is_vegetarian: values.is_vegetarian,
-          mess_id: messId,
-        });
+        const { error } = await supabase
+          .from("menu_items" as any)
+          .insert({
+            name: values.name,
+            description: values.description,
+            day_of_week: values.day_of_week,
+            meal_type: values.meal_type,
+            is_vegetarian: values.is_vegetarian,
+            mess_id: messId,
+          });
 
         if (error) throw error;
         toast({
@@ -212,7 +215,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     if (confirm("Are you sure you want to delete this menu item?")) {
       try {
         const { error } = await supabase
-          .from("menu_items")
+          .from("menu_items" as any)
           .delete()
           .eq("id", id);
 

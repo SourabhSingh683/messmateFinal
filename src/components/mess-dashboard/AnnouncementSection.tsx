@@ -113,8 +113,9 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
+      // Use any type for now until the Supabase types are updated
       const { data, error } = await supabase
-        .from("announcements")
+        .from("announcements" as any)
         .select("*")
         .eq("mess_id", messId)
         .order("created_at", { ascending: false });
@@ -141,7 +142,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       if (editingAnnouncement) {
         // Update existing announcement
         const { error } = await supabase
-          .from("announcements")
+          .from("announcements" as any)
           .update({
             title: values.title,
             content: values.content,
@@ -157,13 +158,15 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
         });
       } else {
         // Create new announcement
-        const { error } = await supabase.from("announcements").insert({
-          title: values.title,
-          content: values.content,
-          start_date: values.start_date,
-          end_date: values.end_date,
-          mess_id: messId,
-        });
+        const { error } = await supabase
+          .from("announcements" as any)
+          .insert({
+            title: values.title,
+            content: values.content,
+            start_date: values.start_date,
+            end_date: values.end_date,
+            mess_id: messId,
+          });
 
         if (error) throw error;
         toast({
@@ -190,7 +193,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     if (confirm("Are you sure you want to delete this announcement?")) {
       try {
         const { error } = await supabase
-          .from("announcements")
+          .from("announcements" as any)
           .delete()
           .eq("id", id);
 
