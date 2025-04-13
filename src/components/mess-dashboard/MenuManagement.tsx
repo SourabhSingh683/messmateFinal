@@ -136,7 +136,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("menu_items" as any)
+        .from("menu_items")
         .select("*")
         .eq("mess_id", messId);
 
@@ -144,7 +144,8 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
         throw error;
       }
 
-      setMenuItems(data || []);
+      // Use type assertion to tell TypeScript this data matches our interface
+      setMenuItems(data as MenuItem[] || []);
     } catch (error) {
       console.error("Error fetching menu items:", error);
       toast({
@@ -162,7 +163,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("menu_items" as any)
+          .from("menu_items")
           .update({
             name: values.name,
             description: values.description,
@@ -180,7 +181,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       } else {
         // Create new item
         const { error } = await supabase
-          .from("menu_items" as any)
+          .from("menu_items")
           .insert({
             name: values.name,
             description: values.description,
@@ -215,7 +216,7 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     if (confirm("Are you sure you want to delete this menu item?")) {
       try {
         const { error } = await supabase
-          .from("menu_items" as any)
+          .from("menu_items")
           .delete()
           .eq("id", id);
 

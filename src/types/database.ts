@@ -55,6 +55,37 @@ export type MealSchedule = {
   updated_at: string;
 };
 
+// Add types for the new tables
+export type MenuItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  day_of_week: string;
+  meal_type: string;
+  is_vegetarian: boolean;
+  mess_id: string;
+  created_at: string;
+};
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  mess_id: string;
+  created_at: string;
+};
+
+export type Announcement = {
+  id: string;
+  title: string;
+  content: string;
+  start_date: string;
+  end_date: string;
+  mess_id: string;
+  created_at: string;
+};
+
 // Custom joined types for complex queries
 export type SubscriptionWithDetails = Subscription & {
   mess_services: MessService;

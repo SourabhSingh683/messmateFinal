@@ -94,7 +94,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("inventory_items" as any)
+        .from("inventory_items")
         .select("*")
         .eq("mess_id", messId)
         .order("name");
@@ -103,7 +103,8 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
         throw error;
       }
 
-      setInventory(data || []);
+      // Use type assertion to tell TypeScript this data matches our interface
+      setInventory(data as InventoryItem[] || []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
       toast({
@@ -121,7 +122,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("inventory_items" as any)
+          .from("inventory_items")
           .update({
             name: values.name,
             quantity: values.quantity,
@@ -137,7 +138,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       } else {
         // Create new item
         const { error } = await supabase
-          .from("inventory_items" as any)
+          .from("inventory_items")
           .insert({
             name: values.name,
             quantity: values.quantity,
@@ -170,7 +171,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
         const { error } = await supabase
-          .from("inventory_items" as any)
+          .from("inventory_items")
           .delete()
           .eq("id", id);
 

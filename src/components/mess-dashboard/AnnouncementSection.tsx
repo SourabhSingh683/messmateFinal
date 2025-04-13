@@ -113,9 +113,8 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      // Use any type for now until the Supabase types are updated
       const { data, error } = await supabase
-        .from("announcements" as any)
+        .from("announcements")
         .select("*")
         .eq("mess_id", messId)
         .order("created_at", { ascending: false });
@@ -124,7 +123,8 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
         throw error;
       }
 
-      setAnnouncements(data || []);
+      // Use type assertion to tell TypeScript this data matches our interface
+      setAnnouncements(data as Announcement[] || []);
     } catch (error) {
       console.error("Error fetching announcements:", error);
       toast({
@@ -142,7 +142,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       if (editingAnnouncement) {
         // Update existing announcement
         const { error } = await supabase
-          .from("announcements" as any)
+          .from("announcements")
           .update({
             title: values.title,
             content: values.content,
@@ -159,7 +159,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
       } else {
         // Create new announcement
         const { error } = await supabase
-          .from("announcements" as any)
+          .from("announcements")
           .insert({
             title: values.title,
             content: values.content,
@@ -193,7 +193,7 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     if (confirm("Are you sure you want to delete this announcement?")) {
       try {
         const { error } = await supabase
-          .from("announcements" as any)
+          .from("announcements")
           .delete()
           .eq("id", id);
 
