@@ -1,175 +1,151 @@
 
-import React, { useEffect, useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
-import { SubscriptionPlan, MealSchedule } from '@/types/database';
-
-interface Subscription {
-  id: string;
-  status: string;
-  profiles?: {
-    first_name?: string;
-    last_name?: string;
-  };
-  subscription_plans?: {
-    name: string;
-  };
-}
-
-interface Payment {
-  id: string;
-  amount: number;
-  payment_date: string;
-  payment_method: string;
-  status: string;
-  profiles?: {
-    first_name: string;
-    last_name: string;
-  };
-}
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CustomerManagement from "@/components/mess-dashboard/CustomerManagement";
+import InventoryManagement from "@/components/mess-dashboard/InventoryManagement";
+import MenuManagement from "@/components/mess-dashboard/MenuManagement";
+import FeedbackSection from "@/components/mess-dashboard/FeedbackSection";
+import AnnouncementSection from "@/components/mess-dashboard/AnnouncementSection";
+import SubscriptionPlansSection from "@/components/mess-dashboard/SubscriptionPlansSection";
+import { 
+  Users, 
+  Package, 
+  Utensils, 
+  MessageSquare, 
+  Megaphone, 
+  BadgePlus
+} from "lucide-react";
 
 const MessDashboard = () => {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [messService, setMessService] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
+    const fetchMessService = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("mess_services")
+          .select("*")
+          .eq("owner_id", user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching mess service:", error);
+        } else {
+          setMessService(data);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessService();
   }, [user]);
 
-  const fetchData = async () => {
-    try {
-      // Just placeholder data for now until API is working
-      setSubscriptions([
-        {
-          id: '1',
-          status: 'active',
-          profiles: {
-            first_name: 'John',
-            last_name: 'Doe'
-          },
-          subscription_plans: {
-            name: 'Monthly Plan'
-          }
-        }
-      ]);
-      
-      setPayments([
-        {
-          id: '1',
-          amount: 2000,
-          payment_date: '2025-04-10',
-          payment_method: 'UPI',
-          status: 'completed',
-          profiles: {
-            first_name: 'John',
-            last_name: 'Doe'
-          }
-        }
-      ]);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
-
-  // Fix the profiles reference in subscriptions display
-  const renderSubscribersList = () => {
-    if (subscriptions.length === 0) {
-      return (
-        <div className="text-center py-6 text-gray-500">
-          No subscribers yet
-        </div>
-      );
-    }
-
+  if (loading) {
     return (
-      <div className="space-y-2">
-        {subscriptions.map((subscription) => {
-          // Safely access profiles data, add null checks
-          const firstName = subscription.profiles?.first_name || '';
-          const lastName = subscription.profiles?.last_name || '';
-          const planName = subscription.subscription_plans?.name || 'Basic Plan';
-          
-          return (
-            <div key={subscription.id} className="flex justify-between items-center p-3 border rounded-lg bg-slate-50">
-              <div>
-                <span className="font-medium">{firstName} {lastName}</span>
-                <div className="text-xs text-gray-500">
-                  Plan: {planName}
-                </div>
-              </div>
-              <Badge variant={subscription.status === 'active' ? 'secondary' : 'outline'} 
-                className={subscription.status === 'active' ? "bg-green-100 text-green-800" : ""}>
-                {subscription.status}
-              </Badge>
-            </div>
-          );
-        })}
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner className="h-8 w-8" />
       </div>
     );
-  };
+  }
 
-  // Fix payments display
-  const renderRecentPayments = () => {
-    if (payments.length === 0) {
-      return (
-        <div className="text-center py-6 text-gray-500">
-          No payment records yet
-        </div>
-      );
-    }
-
+  if (!messService) {
     return (
-      <div className="space-y-2">
-        {payments.map((payment) => {
-          // Add safe access to payment properties
-          const paymentDate = payment.payment_date ? new Date(payment.payment_date) : new Date();
-          const formattedDate = paymentDate.toLocaleDateString('en-US', { 
-            day: 'numeric', month: 'short', year: 'numeric' 
-          });
-          
-          const studentName = payment.profiles ? `${payment.profiles.first_name} ${payment.profiles.last_name}` : 'Student';
-          
-          return (
-            <div key={payment.id} className="flex justify-between items-center p-3 border rounded-lg bg-slate-50">
-              <div>
-                <span className="font-medium">₹{payment.amount}</span>
-                <div className="text-xs text-gray-500">
-                  {formattedDate} • {payment.payment_method}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {studentName}
-                </div>
-              </div>
-              <Badge variant={payment.status === 'completed' ? 'secondary' : 'outline'} 
-                className={payment.status === 'completed' ? "bg-green-100 text-green-800" : ""}>
-                {payment.status}
-              </Badge>
-            </div>
-          );
-        })}
+      <div className="container mx-auto p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">You don't have a mess service yet</h1>
+        <p className="mb-8">Create your mess service to access the dashboard features.</p>
+        <button
+          onClick={() => navigate("/create-mess")}
+          className="bg-primary text-white px-4 py-2 rounded"
+        >
+          Create Mess Service
+        </button>
       </div>
     );
-  };
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Mess Dashboard</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-8 text-center">Mess Owner Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Current Subscribers</h2>
-          {renderSubscribersList()}
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Recent Payments</h2>
-          {renderRecentPayments()}
-        </div>
-      </div>
+      <Tabs defaultValue="customers" className="w-full">
+        <TabsList className="grid grid-cols-6 mb-8">
+          <TabsTrigger value="customers" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Customers</span>
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Inventory</span>
+          </TabsTrigger>
+          <TabsTrigger value="menu" className="flex items-center gap-2">
+            <Utensils className="h-4 w-4" />
+            <span className="hidden sm:inline">Menu</span>
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">Feedback</span>
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4" />
+            <span className="hidden sm:inline">Announcements</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+            <BadgePlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Subscriptions</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {messService.name} - Mess Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TabsContent value="customers">
+              <CustomerManagement messId={messService.id} />
+            </TabsContent>
+            
+            <TabsContent value="inventory">
+              <InventoryManagement messId={messService.id} />
+            </TabsContent>
+            
+            <TabsContent value="menu">
+              <MenuManagement messId={messService.id} />
+            </TabsContent>
+            
+            <TabsContent value="feedback">
+              <FeedbackSection messId={messService.id} />
+            </TabsContent>
+            
+            <TabsContent value="announcements">
+              <AnnouncementSection messId={messService.id} />
+            </TabsContent>
+            
+            <TabsContent value="subscriptions">
+              <SubscriptionPlansSection messId={messService.id} />
+            </TabsContent>
+          </CardContent>
+        </Card>
+      </Tabs>
     </div>
   );
 };
