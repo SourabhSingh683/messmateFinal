@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -120,6 +121,19 @@ const Discover = () => {
     });
 
   const viewMessDetails = (messId: string) => {
+    // Check if user is authenticated before navigating to details page
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to view mess details",
+        variant: "destructive"
+      });
+      // Redirect to login page with a return URL
+      navigate(`/login?redirect=/mess-details/${messId}`);
+      return;
+    }
+    
+    // User is authenticated, proceed to mess details
     navigate(`/mess-details/${messId}`);
   };
 
