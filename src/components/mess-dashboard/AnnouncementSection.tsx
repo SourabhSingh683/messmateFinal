@@ -41,16 +41,7 @@ import {
   Megaphone,
   CalendarDays
 } from "lucide-react";
-
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  start_date: string;
-  end_date: string;
-  mess_id: string;
-}
+import { Announcement } from "@/types/database";
 
 interface AnnouncementSectionProps {
   messId: string;
@@ -114,16 +105,15 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .eq("mess_id", messId)
-        .order("created_at", { ascending: false });
+        .rpc('get_announcements', {
+          p_mess_id: messId
+        })
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      // Use type assertion to tell TypeScript this data matches our interface
       setAnnouncements(data as Announcement[] || []);
     } catch (error) {
       console.error("Error fetching announcements:", error);
@@ -141,15 +131,13 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
     try {
       if (editingAnnouncement) {
         // Update existing announcement
-        const { error } = await supabase
-          .from("announcements")
-          .update({
-            title: values.title,
-            content: values.content,
-            start_date: values.start_date,
-            end_date: values.end_date,
-          })
-          .eq("id", editingAnnouncement.id);
+        const { error } = await supabase.rpc('update_announcement', {
+          p_id: editingAnnouncement.id,
+          p_title: values.title,
+          p_content: values.content,
+          p_start_date: values.start_date,
+          p_end_date: values.end_date
+        });
 
         if (error) throw error;
         toast({
@@ -158,15 +146,13 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
         });
       } else {
         // Create new announcement
-        const { error } = await supabase
-          .from("announcements")
-          .insert({
-            title: values.title,
-            content: values.content,
-            start_date: values.start_date,
-            end_date: values.end_date,
-            mess_id: messId,
-          });
+        const { error } = await supabase.rpc('create_announcement', {
+          p_title: values.title,
+          p_content: values.content,
+          p_start_date: values.start_date,
+          p_end_date: values.end_date,
+          p_mess_id: messId
+        });
 
         if (error) throw error;
         toast({
@@ -192,10 +178,9 @@ const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this announcement?")) {
       try {
-        const { error } = await supabase
-          .from("announcements")
-          .delete()
-          .eq("id", id);
+        const { error } = await supabase.rpc('delete_announcement', {
+          p_id: id
+        });
 
         if (error) throw error;
         fetchAnnouncements();

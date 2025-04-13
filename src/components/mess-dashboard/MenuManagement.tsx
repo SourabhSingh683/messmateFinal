@@ -47,17 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string | null;
-  day_of_week: string;
-  meal_type: string;
-  is_vegetarian: boolean;
-  mess_id: string;
-  created_at: string;
-}
+import { MenuItem } from "@/types/database";
 
 interface MenuManagementProps {
   messId: string;
@@ -136,15 +126,14 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("mess_id", messId);
+        .rpc('get_menu_items', {
+          p_mess_id: messId
+        });
 
       if (error) {
         throw error;
       }
 
-      // Use type assertion to tell TypeScript this data matches our interface
       setMenuItems(data as MenuItem[] || []);
     } catch (error) {
       console.error("Error fetching menu items:", error);
@@ -163,15 +152,14 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("menu_items")
-          .update({
-            name: values.name,
-            description: values.description,
-            day_of_week: values.day_of_week,
-            meal_type: values.meal_type,
-            is_vegetarian: values.is_vegetarian,
-          })
-          .eq("id", editingItem.id);
+          .rpc('update_menu_item', {
+            p_id: editingItem.id,
+            p_name: values.name,
+            p_description: values.description,
+            p_day_of_week: values.day_of_week,
+            p_meal_type: values.meal_type,
+            p_is_vegetarian: values.is_vegetarian
+          });
 
         if (error) throw error;
         toast({
@@ -181,14 +169,13 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
       } else {
         // Create new item
         const { error } = await supabase
-          .from("menu_items")
-          .insert({
-            name: values.name,
-            description: values.description,
-            day_of_week: values.day_of_week,
-            meal_type: values.meal_type,
-            is_vegetarian: values.is_vegetarian,
-            mess_id: messId,
+          .rpc('create_menu_item', {
+            p_name: values.name,
+            p_description: values.description,
+            p_day_of_week: values.day_of_week,
+            p_meal_type: values.meal_type,
+            p_is_vegetarian: values.is_vegetarian,
+            p_mess_id: messId
           });
 
         if (error) throw error;
@@ -216,9 +203,9 @@ const MenuManagement = ({ messId }: MenuManagementProps) => {
     if (confirm("Are you sure you want to delete this menu item?")) {
       try {
         const { error } = await supabase
-          .from("menu_items")
-          .delete()
-          .eq("id", id);
+          .rpc('delete_menu_item', {
+            p_id: id
+          });
 
         if (error) throw error;
         fetchMenuItems();

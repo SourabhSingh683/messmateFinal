@@ -34,15 +34,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Edit, Trash2 } from "lucide-react";
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  mess_id: string;
-  created_at: string;
-}
+import { InventoryItem } from "@/types/database";
 
 interface InventoryManagementProps {
   messId: string;
@@ -94,16 +86,15 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("inventory_items")
-        .select("*")
-        .eq("mess_id", messId)
-        .order("name");
+        .rpc('get_inventory_items', {
+          p_mess_id: messId
+        })
+        .order('name');
 
       if (error) {
         throw error;
       }
 
-      // Use type assertion to tell TypeScript this data matches our interface
       setInventory(data as InventoryItem[] || []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
@@ -122,13 +113,12 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       if (editingItem) {
         // Update existing item
         const { error } = await supabase
-          .from("inventory_items")
-          .update({
-            name: values.name,
-            quantity: values.quantity,
-            unit: values.unit,
-          })
-          .eq("id", editingItem.id);
+          .rpc('update_inventory_item', {
+            p_id: editingItem.id,
+            p_name: values.name,
+            p_quantity: values.quantity,
+            p_unit: values.unit
+          });
 
         if (error) throw error;
         toast({
@@ -138,12 +128,11 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       } else {
         // Create new item
         const { error } = await supabase
-          .from("inventory_items")
-          .insert({
-            name: values.name,
-            quantity: values.quantity,
-            unit: values.unit,
-            mess_id: messId,
+          .rpc('create_inventory_item', {
+            p_name: values.name,
+            p_quantity: values.quantity,
+            p_unit: values.unit,
+            p_mess_id: messId
           });
 
         if (error) throw error;
@@ -171,9 +160,9 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
         const { error } = await supabase
-          .from("inventory_items")
-          .delete()
-          .eq("id", id);
+          .rpc('delete_inventory_item', {
+            p_id: id
+          });
 
         if (error) throw error;
         fetchInventory();

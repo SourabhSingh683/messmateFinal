@@ -110,3 +110,82 @@ export const PaymentsApi = {
       headers: { "Prefer": "return=minimal" }
     })
 };
+
+// New APIs for custom tables
+export const AnnouncementsApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_announcements?p_mess_id=${messId}`),
+  
+  create: (data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/create_announcement`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  update: (id: string, data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/update_announcement`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id, ...data }),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  delete: (id: string) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/delete_announcement`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id }),
+      headers: { "Prefer": "return=minimal" }
+    })
+};
+
+export const InventoryItemsApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_inventory_items?p_mess_id=${messId}`),
+  
+  create: (data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/create_inventory_item`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  update: (id: string, data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/update_inventory_item`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id, ...data }),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  delete: (id: string) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/delete_inventory_item`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id }),
+      headers: { "Prefer": "return=minimal" }
+    })
+};
+
+export const MenuItemsApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/rpc/get_menu_items?p_mess_id=${messId}`),
+  
+  create: (data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/create_menu_item`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  update: (id: string, data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/update_menu_item`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id, ...data }),
+      headers: { "Prefer": "return=minimal" }
+    }),
+  
+  delete: (id: string) => 
+    fetchFromSupabase<any>(`/rest/v1/rpc/delete_menu_item`, {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id }),
+      headers: { "Prefer": "return=minimal" }
+    })
+};
