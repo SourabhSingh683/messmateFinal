@@ -36,6 +36,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from '@/integrations/supabase/client';
 
+interface CustomerData {
+  id: string;
+  profiles?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+  start_date: string;
+  end_date: string | null;
+  status: string;
+}
+
 interface Customer {
   id: string;
   first_name: string;
@@ -91,7 +103,8 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       const data = await CustomersApi.getByMessId(messId);
       
       if (data) {
-        const formattedCustomers = data.map((item) => ({
+        // Fix for the type instantiation issue
+        const formattedCustomers = (data as CustomerData[]).map((item) => ({
           id: item.profiles?.id || "",
           first_name: item.profiles?.first_name || "",
           last_name: item.profiles?.last_name || "",
@@ -402,6 +415,75 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       )}
     </div>
   );
+};
+
+// Add the missing onSubmit function
+const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  try {
+    setIsSubmitting(true);
+    
+    // Check if user exists
+    const { data: existingUsers, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', values.email)
+      .limit(1);
+    
+    if (userError) throw userError;
+    
+    let userId;
+    
+    if (!existingUsers || existingUsers.length === 0) {
+      // Create new user
+      const { data: newUser, error: createError } = await supabase.auth.signUp({
+        email: values.email,
+        password: 'Password123', // Default password that user can change later
+        options: {
+          data: {
+            first_name: values.first_name,
+            last_name: values.last_name,
+            role: 'student'
+          }
+        }
+      });
+      
+      if (createError) throw createError;
+      userId = newUser.user?.id;
+    } else {
+      userId = existingUsers[0].id;
+    }
+    
+    if (!userId) {
+      throw new Error("Failed to get or create user ID");
+    }
+    
+    // Create subscription
+    await CustomersApi.addCustomer({
+      mess_id: messId,
+      student_id: userId,
+      start_date: values.start_date,
+      end_date: values.end_date || null,
+      status: values.status
+    });
+    
+    toast({
+      title: "Success",
+      description: "Customer added successfully",
+    });
+    
+    setOpenDialog(false);
+    form.reset();
+    fetchCustomers();
+  } catch (error: any) {
+    console.error("Error adding customer:", error);
+    toast({
+      title: "Error",
+      description: error.message || "Failed to add customer",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
 };
 
 export default CustomerManagement;
