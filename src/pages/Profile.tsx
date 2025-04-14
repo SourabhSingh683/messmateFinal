@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -197,7 +197,11 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center justify-center md:justify-start">
                     <Calendar className="h-4 w-4 mr-1" />
-                    <span>Joined {new Date(profile?.created_at || '').toLocaleDateString()}</span>
+                    <span>
+                      {profile?.created_at 
+                        ? `Joined ${new Date(profile.created_at).toLocaleDateString()}` 
+                        : 'Recently joined'}
+                    </span>
                   </div>
                 </div>
               </div>

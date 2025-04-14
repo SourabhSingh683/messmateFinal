@@ -9,6 +9,7 @@ export interface UserProfile {
   last_name: string;
   role: UserRole;
   avatar_url: string | null;
+  created_at?: string; // Adding created_at as an optional property
 }
 
 export interface AuthState {
