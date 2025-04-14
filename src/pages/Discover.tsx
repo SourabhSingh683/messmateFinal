@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import { Layout } from '@/components/layout/Layout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { MessService } from '@/types/database';
+import { ChevronLeft, MapPin, Search, Star } from 'lucide-react';
 
 const Discover = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
@@ -32,7 +32,6 @@ const Discover = () => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           
-          // If user is logged in, save their location
           if (user) {
             saveUserLocation(latitude, longitude);
           }
@@ -57,7 +56,6 @@ const Discover = () => {
 
   const saveUserLocation = async (latitude: number, longitude: number) => {
     try {
-      // Use the RPC function to update user location
       const { error } = await supabase.rpc('update_user_location', {
         user_id: user?.id,
         user_latitude: latitude,
@@ -80,6 +78,7 @@ const Discover = () => {
       if (error) throw error;
       
       if (data) {
+        console.log("Fetched mess services:", data);
         setMessServices(data);
       }
     } catch (error: any) {
@@ -95,6 +94,8 @@ const Discover = () => {
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 999;
+    
     const R = 6371; // Radius of the Earth in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -121,51 +122,52 @@ const Discover = () => {
     });
 
   const viewMessDetails = (messId: string) => {
-    // Check if user is authenticated before navigating to details page
     if (!user) {
       toast({
         title: "Authentication required",
         description: "Please log in to view mess details",
         variant: "destructive"
       });
-      // Redirect to login page with a return URL
-      navigate(`/login?redirect=/mess-details/${messId}`);
+      navigate(`/login?redirect=/mess/${messId}`);
       return;
     }
     
-    // User is authenticated, proceed to mess details
-    navigate(`/mess-details/${messId}`);
+    navigate(`/mess/${messId}`);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-4 text-[#5C2C0C]">Find Mess Services Near You</h1>
-          <p className="text-[#8B4513] max-w-2xl mx-auto text-lg font-medium">
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center mb-6">
+          <Button 
+            variant="ghost" 
+            className="mr-2" 
+            onClick={() => navigate(-1)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="ml-1">Back</span>
+          </Button>
+          <h1 className="text-3xl font-bold text-[#5C2C0C]">Find Mess Services Near You</h1>
+        </div>
+        
+        <div className="mb-8 max-w-2xl mx-auto text-center">
+          <p className="text-[#8B4513] max-w-2xl mx-auto text-lg font-medium mb-6">
             Discover affordable, quality meal options near your location. Browse through available mess services and find the perfect fit for your dietary preferences and budget.
           </p>
-        </div>
 
-        <div className="mb-6">
           <div className="flex space-x-4 max-w-xl mx-auto">
-            <Input
-              type="text"
-              placeholder="Search by name or address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-grow"
-            />
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search by name or address..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <Button onClick={getUserLocation} variant="outline">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-2">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="1" />
-                <path d="M12 7V9" />
-                <path d="M12 15v2" />
-                <path d="M7 12H9" />
-                <path d="M15 12h2" />
-              </svg>
+              <MapPin className="h-4 w-4 mr-2" />
               Use Current Location
             </Button>
           </div>
@@ -179,7 +181,7 @@ const Discover = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMessServices.length > 0 ? (
               filteredMessServices.map((mess) => (
-                <Card key={mess.id} className="overflow-hidden h-full flex flex-col">
+                <Card key={mess.id} className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow duration-300 border border-[#C4A484]/30">
                   <div className="h-48 bg-muted relative">
                     <img
                       src="/placeholder.svg"
@@ -203,7 +205,8 @@ const Discover = () => {
                       }}
                     />
                     {userLocation && (
-                      <span className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                      <span className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center">
+                        <MapPin className="h-3 w-3 mr-1" />
                         {calculateDistance(
                           userLocation.lat,
                           userLocation.lng,
@@ -213,44 +216,59 @@ const Discover = () => {
                       </span>
                     )}
                   </div>
-                  <CardHeader>
-                    <CardTitle>{mess.name}</CardTitle>
-                    <CardDescription>{mess.address}</CardDescription>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xl text-[#5C2C0C]">{mess.name}</CardTitle>
+                    <CardDescription className="flex items-center">
+                      <MapPin className="h-3 w-3 mr-1 text-gray-500" />
+                      {mess.address}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground mb-2">
+                  <CardContent className="flex-grow pb-2">
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                       {mess.description || "No description available."}
                     </p>
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-4">
                       {mess.is_vegetarian && (
-                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Veg</span>
+                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                          <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+                          Veg
+                        </span>
                       )}
                       {mess.is_non_vegetarian && (
-                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">Non-Veg</span>
+                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                          <span className="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
+                          Non-Veg
+                        </span>
                       )}
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                         ₹{mess.price_monthly}/month
+                      </span>
+                      <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                        <Star className="h-3 w-3 mr-1 fill-amber-500 stroke-amber-500" />
+                        4.5
                       </span>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button onClick={() => viewMessDetails(mess.id)} className="w-full">
+                    <Button 
+                      onClick={() => viewMessDetails(mess.id)} 
+                      className="w-full bg-[#8B4513] hover:bg-[#5C2C0C] text-white"
+                    >
                       View Details
                     </Button>
                   </CardFooter>
                 </Card>
               ))
             ) : (
-              <div className="col-span-3 text-center py-12">
-                <h3 className="text-lg font-medium">No mess services found</h3>
+              <div className="col-span-3 text-center py-12 bg-white/50 rounded-lg border border-[#C4A484]/20">
+                <h3 className="text-lg font-medium text-[#5C2C0C]">No mess services found</h3>
                 <p className="text-muted-foreground">Try adjusting your search or location.</p>
               </div>
             )}
           </div>
         )}
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </Layout>
   );
 };
 

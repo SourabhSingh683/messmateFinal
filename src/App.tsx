@@ -17,6 +17,7 @@ import StudentDashboard from '@/pages/StudentDashboard';
 import MessDetails from '@/pages/MessDetails';
 import About from '@/pages/About';
 import Pricing from '@/pages/Pricing';
+import Discover from '@/pages/Discover';
 
 function App() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ function App() {
           <Route path="/mess/:id" element={<MessDetails />} />
           <Route path="/about" element={<About />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/discover" element={<Discover />} />
         </Routes>
         <Toaster />
       </AuthProvider>

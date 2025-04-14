@@ -11,6 +11,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import CustomerManagement from "@/components/mess-dashboard/CustomerManagement";
 import InventoryManagement from "@/components/mess-dashboard/InventoryManagement";
 import MenuManagement from "@/components/mess-dashboard/MenuManagement";
@@ -25,7 +26,8 @@ import {
   Utensils, 
   MessageSquare, 
   Megaphone, 
-  BadgePlus
+  BadgePlus,
+  ChevronLeft
 } from "lucide-react";
 
 const MessDashboard = () => {
@@ -73,7 +75,15 @@ const MessDashboard = () => {
   if (!messService) {
     return (
       <div className="container mx-auto p-8 text-center dark:bg-gray-900 dark:text-white min-h-screen">
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between items-center mb-6">
+          <Button 
+            variant="ghost" 
+            className="mr-2" 
+            onClick={() => navigate(-1)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="ml-1">Back</span>
+          </Button>
           <ThemeToggle />
         </div>
         <div className="max-w-md mx-auto mt-16 p-8 rounded-lg border dark:border-gray-700 shadow-lg dark:bg-gray-800/50 backdrop-blur-sm">
@@ -93,7 +103,16 @@ const MessDashboard = () => {
   return (
     <div className="container mx-auto p-4 dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold dark:text-white">Mess Owner Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="ml-1">Back</span>
+          </Button>
+          <h1 className="text-3xl font-bold dark:text-white">Mess Owner Dashboard</h1>
+        </div>
         <ThemeToggle />
       </div>
       
