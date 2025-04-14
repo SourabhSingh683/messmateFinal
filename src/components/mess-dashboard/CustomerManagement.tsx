@@ -1,95 +1,93 @@
 
-import { useState, useEffect } from "react";
-import { CustomersApi } from "@/utils/supabaseRawApi";
-import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, UserPlus, RefreshCw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+  DialogClose,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from '@/integrations/supabase/client';
+} from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { UserPlus, Edit, Trash2 } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-interface CustomerData {
-  id: string;
-  profiles?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
-  start_date: string;
-  end_date: string | null;
-  status: string;
-}
-
+// Define types for our data structures
 interface Customer {
   id: string;
+  student_id: string;
   first_name: string;
   last_name: string;
-  subscription: {
-    id: string;
-    start_date: string;
-    end_date: string | null;
-    status: string;
-  };
+  email: string;
+  created_at: string;
+  mess_id: string;
+  subscription_status: 'active' | 'inactive' | 'pending';
 }
+
+// Form schema for adding a new customer
+const customerSchema = z.object({
+  first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
+  last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+});
 
 interface CustomerManagementProps {
   messId: string;
 }
 
-const formSchema = z.object({
-  first_name: z.string().min(2, "First name must be at least 2 characters"),
-  last_name: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  start_date: z.string().min(1, "Start date is required"),
-  end_date: z.string().optional(),
-  status: z.string().default("active")
-});
-
 const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
+  const [openAlertDialog, setOpenAlertDialog] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  // Initialize the form
+  const form = useForm<z.infer<typeof customerSchema>>({
+    resolver: zodResolver(customerSchema),
     defaultValues: {
-      first_name: "",
-      last_name: "",
-      email: "",
-      start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      status: "active"
+      first_name: '',
+      last_name: '',
+      email: '',
     },
   });
 
@@ -100,261 +98,200 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const data = await CustomersApi.getByMessId(messId);
       
-      if (data) {
-        // Fix for the type instantiation issue
-        const formattedCustomers = (data as CustomerData[]).map((item) => ({
-          id: item.profiles?.id || "",
-          first_name: item.profiles?.first_name || "",
-          last_name: item.profiles?.last_name || "",
-          subscription: {
-            id: item.id,
-            start_date: item.start_date,
-            end_date: item.end_date,
-            status: item.status,
-          },
-        }));
-        setCustomers(formattedCustomers);
+      // Fetch students who have subscribed to this mess
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select(`
+          id,
+          student_id,
+          mess_id,
+          status,
+          profiles:student_id (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('mess_id', messId);
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      console.error("Error fetching customers:", error);
+
+      // Map the data to our Customer interface
+      const formattedCustomers: Customer[] = data.map((item) => ({
+        id: item.id,
+        student_id: item.student_id,
+        first_name: item.profiles?.first_name || 'Unknown',
+        last_name: item.profiles?.last_name || 'Unknown',
+        email: item.profiles?.email || 'No email',
+        created_at: item.created_at || new Date().toISOString(),
+        mess_id: item.mess_id,
+        subscription_status: item.status,
+      }));
+
+      setCustomers(formattedCustomers);
+    } catch (error: any) {
+      console.error('Error fetching customers:', error.message);
       toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load customers. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof customerSchema>) => {
     try {
       setIsSubmitting(true);
       
-      // Check if user exists
-      const { data: existingUsers, error: userError } = await supabase
+      // First, create a new user profile
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('email', values.email)
-        .limit(1);
-      
-      if (userError) throw userError;
-      
-      let userId;
-      
-      if (!existingUsers || existingUsers.length === 0) {
-        // Create new user
-        const { data: newUser, error: createError } = await supabase.auth.signUp({
+        .insert({
+          first_name: values.first_name,
+          last_name: values.last_name,
           email: values.email,
-          password: 'Password123', // Default password that user can change later
-          options: {
-            data: {
-              first_name: values.first_name,
-              last_name: values.last_name,
-              role: 'student'
-            }
-          }
+          role: 'student',
+        })
+        .select('id')
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Now create a subscription for this user
+      const { error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .insert({
+          student_id: profileData.id,
+          mess_id: messId,
+          status: 'active',
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
         });
-        
-        if (createError) throw createError;
-        userId = newUser.user?.id;
-      } else {
-        userId = existingUsers[0].id;
-      }
-      
-      if (!userId) {
-        throw new Error("Failed to get or create user ID");
-      }
-      
-      // Create subscription
-      await CustomersApi.addCustomer({
-        mess_id: messId,
-        student_id: userId,
-        start_date: values.start_date,
-        end_date: values.end_date || null,
-        status: values.status
-      });
-      
+
+      if (subscriptionError) throw subscriptionError;
+
       toast({
-        title: "Success",
-        description: "Customer added successfully",
+        title: 'Success',
+        description: 'Customer added successfully',
       });
       
       setOpenDialog(false);
       form.reset();
       fetchCustomers();
     } catch (error: any) {
-      console.error("Error adding customer:", error);
+      console.error('Error adding customer:', error.message);
       toast({
-        title: "Error",
-        description: error.message || "Failed to add customer",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to add customer',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.last_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleDeleteCustomer = async () => {
+    if (!selectedCustomerId) return;
 
-  if (loading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
-  }
+    try {
+      setIsSubmitting(true);
+      
+      // Delete the subscription first
+      const { error } = await supabase
+        .from('subscriptions')
+        .delete()
+        .eq('id', selectedCustomerId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Customer removed successfully',
+      });
+      
+      setOpenAlertDialog(false);
+      setSelectedCustomerId(null);
+      fetchCustomers();
+    } catch (error: any) {
+      console.error('Error deleting customer:', error.message);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete customer',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between space-x-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search customers..."
-            className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors duration-200"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button 
-          onClick={fetchCustomers}
-          variant="outline"
-          size="icon"
-          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600 transition-colors duration-200 hover:scale-105"
-        >
-          <RefreshCw className="h-4 w-4" />
-          <span className="sr-only">Refresh</span>
-        </Button>
-        
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Customers</h2>
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button 
-              className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Customer
+            <Button className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              <span>Add Customer</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Customer</DialogTitle>
-              <DialogDescription className="dark:text-gray-400">
-                Enter customer details to add them to your mess service
+              <DialogDescription>
+                Fill in the customer details below. This will create a new customer account.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="first_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">First Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="John" 
-                            {...field} 
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="last_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">Last Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Doe" 
-                            {...field} 
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="first_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="dark:text-gray-300">Email</FormLabel>
+                      <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email"
-                          placeholder="john.doe@example.com" 
-                          {...field} 
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
+                        <Input placeholder="John" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">Start Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field} 
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">End Date (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field} 
-                            value={field.value || ""}
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
+                <FormField
+                  control={form.control}
+                  name="last_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="john.doe@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <DialogFooter>
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-primary/90 text-white transition-colors duration-200"
-                  >
-                    {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    Add Customer
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Adding...' : 'Add Customer'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -363,127 +300,98 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         </Dialog>
       </div>
 
-      {filteredCustomers.length > 0 ? (
-        <div className="rounded-md border dark:border-gray-700 overflow-hidden glass-card">
-          <Table>
-            <TableHeader className="bg-muted/50 dark:bg-gray-700">
-              <TableRow>
-                <TableHead className="dark:text-gray-300">Name</TableHead>
-                <TableHead className="dark:text-gray-300">Subscription Status</TableHead>
-                <TableHead className="dark:text-gray-300">Start Date</TableHead>
-                <TableHead className="dark:text-gray-300">End Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="dark:bg-gray-800">
-              {filteredCustomers.map((customer) => (
-                <TableRow key={customer.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
-                  <TableCell className="dark:text-gray-300">
-                    {customer.first_name} {customer.last_name}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        customer.subscription.status === "active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                      }`}
-                    >
-                      {customer.subscription.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="dark:text-gray-300">
-                    {new Date(customer.subscription.start_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="dark:text-gray-300">
-                    {customer.subscription.end_date
-                      ? new Date(customer.subscription.end_date).toLocaleDateString()
-                      : "Ongoing"}
-                  </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : customers.length > 0 ? (
+            <Table>
+              <TableCaption>A list of your customers.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50 glass-card">
-          <UserPlus className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="font-medium">No customers found.</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add your first customer using the Add Customer button.
-          </p>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">
+                      {customer.first_name} {customer.last_name}
+                    </TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        customer.subscription_status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : customer.subscription_status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {customer.subscription_status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="icon">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => {
+                            setSelectedCustomerId(customer.id);
+                            setOpenAlertDialog(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No customers found.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your first customer to get started.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={openAlertDialog} onOpenChange={setOpenAlertDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the customer from your mess service. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCustomer}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
-
-// Add the missing onSubmit function
-const onSubmit = async (values: z.infer<typeof formSchema>) => {
-  try {
-    setIsSubmitting(true);
-    
-    // Check if user exists
-    const { data: existingUsers, error: userError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', values.email)
-      .limit(1);
-    
-    if (userError) throw userError;
-    
-    let userId;
-    
-    if (!existingUsers || existingUsers.length === 0) {
-      // Create new user
-      const { data: newUser, error: createError } = await supabase.auth.signUp({
-        email: values.email,
-        password: 'Password123', // Default password that user can change later
-        options: {
-          data: {
-            first_name: values.first_name,
-            last_name: values.last_name,
-            role: 'student'
-          }
-        }
-      });
-      
-      if (createError) throw createError;
-      userId = newUser.user?.id;
-    } else {
-      userId = existingUsers[0].id;
-    }
-    
-    if (!userId) {
-      throw new Error("Failed to get or create user ID");
-    }
-    
-    // Create subscription
-    await CustomersApi.addCustomer({
-      mess_id: messId,
-      student_id: userId,
-      start_date: values.start_date,
-      end_date: values.end_date || null,
-      status: values.status
-    });
-    
-    toast({
-      title: "Success",
-      description: "Customer added successfully",
-    });
-    
-    setOpenDialog(false);
-    form.reset();
-    fetchCustomers();
-  } catch (error: any) {
-    console.error("Error adding customer:", error);
-    toast({
-      title: "Error",
-      description: error.message || "Failed to add customer",
-      variant: "destructive",
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
 };
 
 export default CustomerManagement;

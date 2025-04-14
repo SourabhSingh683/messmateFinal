@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, UserRole } from "@/types/auth";
 import { toast } from "@/hooks/use-toast";
@@ -23,12 +22,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+interface AuthProviderProps {
+  children: React.ReactNode;
+  onAuthSuccess?: (path: string) => void;
+}
+
+export const AuthProvider = ({ children, onAuthSuccess }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -122,11 +125,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       // If the role is a mess owner and they successfully signed up, 
-      // we can redirect them to create their mess profile
+      // redirect them to create their mess profile
       if (userData.role === "mess_owner" && data.user) {
-        navigate("/create-mess");
+        if (onAuthSuccess) onAuthSuccess("/create-mess");
       } else {
-        navigate("/");
+        if (onAuthSuccess) onAuthSuccess("/");
       }
     } catch (error: any) {
       toast({
@@ -161,7 +164,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Signed in successfully",
       });
       
-      navigate("/");
+      if (onAuthSuccess) onAuthSuccess("/");
     } catch (error: any) {
       toast({
         title: "Sign in failed",
@@ -188,7 +191,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      navigate("/login");
+      if (onAuthSuccess) onAuthSuccess("/login");
     } catch (error: any) {
       toast({
         title: "Sign out failed",
