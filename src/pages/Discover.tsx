@@ -9,13 +9,14 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { MessService } from '@/types/database';
-import { ChevronLeft, MapPin, Search, Star } from 'lucide-react';
+import { ChevronLeft, MapPin, Search, Star, Loader } from 'lucide-react';
 
 const Discover = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -121,18 +122,31 @@ const Discover = () => {
       return 0;
     });
 
+  const handleBack = () => {
+    setIsNavigating(true);
+    setTimeout(() => {
+      navigate(-1);
+    }, 100);
+  };
+
   const viewMessDetails = (messId: string) => {
+    setIsNavigating(true);
+    
     if (!user) {
       toast({
         title: "Authentication required",
         description: "Please log in to view mess details",
         variant: "destructive"
       });
-      navigate(`/login?redirect=/mess/${messId}`);
+      setTimeout(() => {
+        navigate(`/login?redirect=/mess/${messId}`);
+      }, 100);
       return;
     }
     
-    navigate(`/mess/${messId}`);
+    setTimeout(() => {
+      navigate(`/mess/${messId}`);
+    }, 100);
   };
 
   return (
@@ -142,7 +156,8 @@ const Discover = () => {
           <Button 
             variant="ghost" 
             className="mr-2" 
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
+            disabled={isNavigating}
           >
             <ChevronLeft className="h-5 w-5" />
             <span className="ml-1">Back</span>
@@ -155,7 +170,7 @@ const Discover = () => {
             Discover affordable, quality meal options near your location. Browse through available mess services and find the perfect fit for your dietary preferences and budget.
           </p>
 
-          <div className="flex space-x-4 max-w-xl mx-auto">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 max-w-xl mx-auto">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -175,7 +190,10 @@ const Discover = () => {
 
         {loading ? (
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-messmate-brown"></div>
+            <div className="flex flex-col items-center">
+              <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading mess services...</p>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -253,6 +271,7 @@ const Discover = () => {
                     <Button 
                       onClick={() => viewMessDetails(mess.id)} 
                       className="w-full bg-[#8B4513] hover:bg-[#5C2C0C] text-white"
+                      disabled={isNavigating}
                     >
                       View Details
                     </Button>

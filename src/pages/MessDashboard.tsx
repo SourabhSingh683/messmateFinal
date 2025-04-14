@@ -80,7 +80,17 @@ const MessDashboard = () => {
 
   const handleNavigation = (path: string) => {
     setIsNavigating(true);
-    navigate(path);
+    setTimeout(() => {
+      navigate(path);
+    }, 100);
+  };
+
+  // Handle back navigation safely
+  const handleBack = () => {
+    setIsNavigating(true);
+    setTimeout(() => {
+      navigate("/");
+    }, 100); 
   };
 
   if (loading) {
@@ -99,7 +109,8 @@ const MessDashboard = () => {
           <Button 
             variant="ghost" 
             className="mr-2" 
-            onClick={() => navigate("/")}
+            onClick={handleBack}
+            disabled={isNavigating}
           >
             <Home className="h-5 w-5 mr-2" />
             <span>Home</span>
@@ -112,6 +123,7 @@ const MessDashboard = () => {
           <button
             onClick={() => handleNavigation("/create-mess")}
             className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
+            disabled={isNavigating}
           >
             Create Mess Service
           </button>
@@ -126,7 +138,7 @@ const MessDashboard = () => {
         <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
-            onClick={() => navigate("/")}
+            onClick={handleBack}
             disabled={isNavigating}
           >
             <Home className="h-5 w-5 mr-2" />

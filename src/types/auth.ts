@@ -9,7 +9,10 @@ export interface UserProfile {
   last_name: string;
   role: UserRole;
   avatar_url: string | null;
-  created_at?: string; // Adding created_at as an optional property
+  created_at?: string;
+  updated_at?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface AuthState {
