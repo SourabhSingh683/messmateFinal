@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -95,6 +96,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     try {
       setLoading(true);
       
+      // Query subscriptions with a join to profiles to get customer information
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -102,11 +104,11 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           student_id,
           mess_id,
           status,
-          profiles:student_id(
-            id,
+          created_at,
+          profiles:profiles(
             first_name,
             last_name,
-            email
+            avatar_url
           )
         `)
         .eq('mess_id', messId);
@@ -120,7 +122,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         student_id: item.student_id,
         first_name: item.profiles?.first_name || 'Unknown',
         last_name: item.profiles?.last_name || 'Unknown',
-        email: item.profiles?.email || 'No email',
+        email: 'No email', // Email isn't available in the current schema
         created_at: item.created_at || new Date().toISOString(),
         mess_id: item.mess_id,
         subscription_status: item.status,
@@ -143,9 +145,14 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     try {
       setIsSubmitting(true);
       
+      // Generate a random UUID for the new profile
+      const id = crypto.randomUUID();
+      
+      // Create a new profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: id, // Using the generated UUID
           first_name: values.first_name,
           last_name: values.last_name,
           role: 'student',
@@ -155,10 +162,11 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
 
       if (profileError) throw profileError;
 
+      // Create a subscription for the new profile
       const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
-          student_id: profileData.id,
+          student_id: id, // Using the same UUID as the profile ID
           mess_id: messId,
           status: 'active',
           start_date: new Date().toISOString(),
