@@ -26,7 +26,10 @@ export function ThemeToggle() {
             variant="outline"
             size="icon"
             onClick={toggleTheme}
-            className="h-9 w-9 rounded-md transition-colors bg-white/10 backdrop-blur-sm border-white/20 dark:bg-gray-800/60 dark:border-gray-700"
+            className="h-9 w-9 rounded-md transition-all duration-300 
+                      bg-white/10 backdrop-blur-sm border-white/20 
+                      hover:bg-white/20 hover:scale-105
+                      dark:bg-gray-800/60 dark:border-gray-700 dark:hover:bg-gray-700/70"
           >
             {theme === "light" ? (
               <Sun className="h-5 w-5 text-yellow-500 transition-all" />

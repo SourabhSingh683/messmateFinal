@@ -1,112 +1,47 @@
 
-import { Toaster } from "./components/ui/toaster";
-import { Toaster as Sonner } from "./components/ui/sonner";
-import { TooltipProvider } from "./components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import HowItWorks from "./pages/HowItWorks";
-import NotFound from "./pages/NotFound";
-import { AuthProvider } from "./context/AuthContext";
-import { ThemeProvider } from "./context/ThemeContext";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import Discover from "./pages/Discover";
-import MessDetails from "./pages/MessDetails";
-import StudentDashboard from "./pages/StudentDashboard";
-import MessDashboard from "./pages/MessDashboard";
-import ManageMess from "./pages/ManageMess";
-import EditMess from "./pages/EditMess";
-import CreateMess from "./pages/CreateMess";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/AuthContext';
 
-const queryClient = new QueryClient();
+// Pages
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import MessDashboard from '@/pages/MessDashboard';
+import ManageMess from '@/pages/ManageMess';
+import CreateMess from '@/pages/CreateMess';
+import EditMess from '@/pages/EditMess';
+import Profile from '@/pages/Profile';
+import StudentDashboard from '@/pages/StudentDashboard';
+import MessDetails from '@/pages/MessDetails';
+import About from '@/pages/About';
+import Pricing from '@/pages/Pricing';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/mess-details/:messId" element={<MessDetails />} />
-              
-              {/* Protected Student Routes */}
-              <Route 
-                path="/student-dashboard" 
-                element={
-                  <ProtectedRoute allowedRoles={['student']}>
-                    <StudentDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Protected Mess Owner Routes */}
-              <Route 
-                path="/mess-dashboard" 
-                element={
-                  <ProtectedRoute allowedRoles={['mess_owner']}>
-                    <MessDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/manage-mess" 
-                element={
-                  <ProtectedRoute allowedRoles={['mess_owner']}>
-                    <ManageMess />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/create-mess" 
-                element={
-                  <ProtectedRoute allowedRoles={['mess_owner']}>
-                    <CreateMess />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/edit-mess/:messId" 
-                element={
-                  <ProtectedRoute allowedRoles={['mess_owner']}>
-                    <EditMess />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/profile" 
-                element={
-                  <ProtectedRoute>
-                    {/* <ProfilePage /> */}
-                    <div className="container mx-auto p-8">
-                      <h1 className="text-2xl font-bold mb-4">User Profile</h1>
-                      <p>This page is under construction. Coming soon!</p>
-                    </div>
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/mess-dashboard" element={<MessDashboard />} />
+            <Route path="/manage-mess" element={<ManageMess />} />
+            <Route path="/create-mess" element={<CreateMess />} />
+            <Route path="/edit-mess/:id" element={<EditMess />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/student-dashboard" element={<StudentDashboard />} />
+            <Route path="/mess/:id" element={<MessDetails />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/pricing" element={<Pricing />} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
 
 export default App;

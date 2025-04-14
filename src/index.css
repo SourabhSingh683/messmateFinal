@@ -59,14 +59,45 @@
   }
 }
 
+/* Enhanced glassmorphism effects */
 .glass {
-  @apply backdrop-blur-md bg-white/5 border border-white/10 dark:bg-gray-800/30 dark:border-gray-700/50;
+  @apply backdrop-blur-md bg-white/10 border border-white/10 transition-all duration-300
+         dark:bg-gray-800/40 dark:border-gray-700/50 dark:shadow-md;
 }
 
 .glass-card {
-  @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl dark:bg-gray-800/40 dark:border-gray-700/50;
+  @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300
+         hover:shadow-2xl hover:bg-white/15
+         dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-800/50;
 }
 
 .button-glass {
-  @apply bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-700/50;
+  @apply bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-200
+         hover:bg-white/20 hover:shadow-md hover:scale-105
+         dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-700/50;
+}
+
+/* Animation classes */
+.hover-scale {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+.hover-shadow {
+  @apply transition-shadow duration-200 hover:shadow-lg;
+}
+
+/* Create a new navigation bar class */
+.nav-glass {
+  @apply backdrop-blur-md bg-white/70 border-b border-white/20 shadow-sm
+         dark:bg-gray-900/70 dark:border-gray-800/50;
+}
+
+/* Responsive utilities */
+.responsive-container {
+  @apply container mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Input focus styles */
+.input-focus {
+  @apply focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200;
 }

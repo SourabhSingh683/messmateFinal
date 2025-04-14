@@ -15,6 +15,25 @@ const baseHeaders = {
   "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
 };
 
+// Get the session token if available
+const getAuthHeaders = () => {
+  const storedSession = localStorage.getItem('supabase.auth.token');
+  if (storedSession) {
+    try {
+      const session = JSON.parse(storedSession);
+      if (session?.access_token) {
+        return {
+          ...baseHeaders,
+          "Authorization": `Bearer ${session.access_token}`
+        };
+      }
+    } catch (error) {
+      console.error("Error parsing session:", error);
+    }
+  }
+  return baseHeaders;
+};
+
 // Generic fetch function with proper typing
 async function fetchFromSupabase<T>(
   path: string,
@@ -22,7 +41,7 @@ async function fetchFromSupabase<T>(
 ): Promise<T> {
   const url = `${SUPABASE_URL}${path}`;
   const headers = {
-    ...baseHeaders,
+    ...getAuthHeaders(),
     ...options.headers
   };
   
@@ -141,7 +160,7 @@ export const AnnouncementsApi = {
 
 export const InventoryItemsApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/inventory_items?mess_id=eq.${messId}&order=name.asc`),
+    fetchFromSupabase<any[]>(`/rest/v1/inventory_items?mess_id=eq.${messId}&order=created_at.desc`),
   
   create: (data: any) => 
     fetchFromSupabase<any>(`/rest/v1/inventory_items`, {
@@ -166,7 +185,7 @@ export const InventoryItemsApi = {
 
 export const MenuItemsApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/menu_items?mess_id=eq.${messId}&order=day_of_week.asc,meal_type.asc`),
+    fetchFromSupabase<any[]>(`/rest/v1/menu_items?mess_id=eq.${messId}&order=created_at.desc`),
   
   create: (data: any) => 
     fetchFromSupabase<any>(`/rest/v1/menu_items`, {
@@ -189,34 +208,19 @@ export const MenuItemsApi = {
     })
 };
 
-// API for fetching customers (subscriptions with user profiles)
-export const CustomersApi = {
-  getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/subscriptions?mess_id=eq.${messId}&select=id,start_date,end_date,status,student_id,profiles:student_id(id,first_name,last_name)`)
-};
-
-// API for feedback/reviews
 export const FeedbackApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/reviews?mess_id=eq.${messId}&select=*,profiles:user_id(first_name,last_name)&order=created_at.desc`),
-  
-  create: (data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/reviews`, {
+    fetchFromSupabase<any[]>(`/rest/v1/reviews?mess_id=eq.${messId}&select=*,profiles(first_name,last_name)&order=created_at.desc`),
+};
+
+export const CustomersApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/subscriptions?mess_id=eq.${messId}&select=*,profiles:profiles(id,first_name,last_name)&order=created_at.desc`),
+
+  addCustomer: (data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/subscriptions`, {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { "Prefer": "return=representation" }
     }),
-  
-  update: (id: string, data: any) => 
-    fetchFromSupabase<any>(`/rest/v1/reviews?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-      headers: { "Prefer": "return=representation" }
-    }),
-  
-  delete: (id: string) => 
-    fetchFromSupabase<any>(`/rest/v1/reviews?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: { "Prefer": "return=minimal" }
-    })
 };
