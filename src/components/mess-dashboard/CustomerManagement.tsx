@@ -48,13 +48,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Spinner } from "@/components/ui/spinner";
 
 interface Customer {
   id: string;
   student_id: string;
   first_name: string;
   last_name: string;
-  email: string;
   created_at: string;
   mess_id: string;
   subscription_status: string;
@@ -63,7 +63,6 @@ interface Customer {
 const customerSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
 interface CustomerManagementProps {
@@ -84,7 +83,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     defaultValues: {
       first_name: '',
       last_name: '',
-      email: '',
     },
   });
 
@@ -105,7 +103,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           mess_id,
           status,
           created_at,
-          profiles:profiles(
+          profiles:student_id(
             first_name,
             last_name,
             avatar_url
@@ -122,7 +120,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         student_id: item.student_id,
         first_name: item.profiles?.first_name || 'Unknown',
         last_name: item.profiles?.last_name || 'Unknown',
-        email: 'No email', // Email isn't available in the current schema
         created_at: item.created_at || new Date().toISOString(),
         mess_id: item.mess_id,
         subscription_status: item.status,
@@ -156,6 +153,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           first_name: values.first_name,
           last_name: values.last_name,
           role: 'student',
+          avatar_url: null
         })
         .select('id')
         .single();
@@ -169,8 +167,8 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           student_id: id, // Using the same UUID as the profile ID
           mess_id: messId,
           status: 'active',
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          start_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         });
 
       if (subscriptionError) throw subscriptionError;
@@ -274,21 +272,9 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="john.doe@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : null}
                     {isSubmitting ? 'Adding...' : 'Add Customer'}
                   </Button>
                 </DialogFooter>
@@ -305,7 +291,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-40">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              <Spinner className="h-8 w-8" />
             </div>
           ) : customers.length > 0 ? (
             <Table>
@@ -313,8 +299,8 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -324,7 +310,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                     <TableCell className="font-medium">
                       {customer.first_name} {customer.last_name}
                     </TableCell>
-                    <TableCell>{customer.email}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.subscription_status === 'active' 
@@ -335,6 +320,9 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                       }`}>
                         {customer.subscription_status}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(customer.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -383,6 +371,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
               disabled={isSubmitting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : null}
               {isSubmitting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>

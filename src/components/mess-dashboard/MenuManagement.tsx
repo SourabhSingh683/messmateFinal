@@ -1,16 +1,15 @@
 
-import { useState, useEffect } from "react";
-import { MenuItemsApi } from "@/utils/supabaseRawApi";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { MenuItemsApi } from '@/utils/supabaseRawApi';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -18,506 +17,465 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  Plus, 
-  Edit, 
-  Trash2,
-  CalendarDays,
-  Utensils,
-  Search
-} from "lucide-react";
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { MenuItem } from "@/types/database";
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Spinner } from "@/components/ui/spinner";
+
+const DAYS_OF_WEEK = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string | null;
+  day_of_week: string;
+  meal_type: string;
+  is_vegetarian: boolean;
+  mess_id: string;
+}
 
 interface MenuManagementProps {
   messId: string;
 }
 
-const daysOfWeek = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
-const mealTypes = ["Breakfast", "Lunch", "Dinner", "Snacks"];
-
-const formSchema = z.object({
-  name: z.string().min(2, "Item name must be at least 2 characters"),
-  description: z.string().optional(),
-  day_of_week: z.string().min(1, "Day of week is required"),
-  meal_type: z.string().min(1, "Meal type is required"),
-  is_vegetarian: z.boolean().default(false),
-});
-
-const MenuManagement = ({ messId }: MenuManagementProps) => {
+const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [currentView, setCurrentView] = useState<{
-    day: string;
-    meal: string;
-  }>({
-    day: "Monday",
-    meal: "Breakfast",
-  });
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      day_of_week: "Monday",
-      meal_type: "Breakfast",
-      is_vegetarian: false,
-    },
-  });
+  // Form state
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [dayOfWeek, setDayOfWeek] = useState(DAYS_OF_WEEK[0]);
+  const [mealType, setMealType] = useState(MEAL_TYPES[0]);
+  const [isVegetarian, setIsVegetarian] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMenuItems();
-  }, [messId]);
-
-  useEffect(() => {
-    if (editingItem) {
-      form.reset({
-        name: editingItem.name,
-        description: editingItem.description || "",
-        day_of_week: editingItem.day_of_week,
-        meal_type: editingItem.meal_type,
-        is_vegetarian: editingItem.is_vegetarian,
-      });
-    } else {
-      form.reset({
-        name: "",
-        description: "",
-        day_of_week: currentView.day,
-        meal_type: currentView.meal,
-        is_vegetarian: false,
-      });
-    }
-  }, [editingItem, form, currentView]);
+  }, [messId, selectedDay, selectedMeal]);
 
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      const data = await MenuItemsApi.getByMessId(messId);
-      setMenuItems(data as MenuItem[] || []);
+      let { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('mess_id', messId);
+
+      if (error) throw error;
+
+      // Filter by day and meal type if selected
+      if (selectedDay) {
+        data = data.filter(item => item.day_of_week === selectedDay);
+      }
+      if (selectedMeal) {
+        data = data.filter(item => item.meal_type === selectedMeal);
+      }
+
+      // Group by day and meal type
+      const groupedData = data.sort((a, b) => {
+        const dayDiff = DAYS_OF_WEEK.indexOf(a.day_of_week) - DAYS_OF_WEEK.indexOf(b.day_of_week);
+        if (dayDiff !== 0) return dayDiff;
+        return MEAL_TYPES.indexOf(a.meal_type) - MEAL_TYPES.indexOf(b.meal_type);
+      });
+
+      setMenuItems(groupedData);
     } catch (error) {
-      console.error("Error fetching menu items:", error);
+      console.error('Error fetching menu items:', error);
       toast({
-        title: "Error",
-        description: "Failed to load menu items",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load menu items.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      if (editingItem) {
-        // Update existing item
-        await MenuItemsApi.update(editingItem.id, {
-          name: values.name,
-          description: values.description,
-          day_of_week: values.day_of_week,
-          meal_type: values.meal_type,
-          is_vegetarian: values.is_vegetarian
-        });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a menu item name.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
+    try {
+      setIsSubmitting(true);
+      
+      const menuItem = {
+        name,
+        description: description || null,
+        day_of_week: dayOfWeek,
+        meal_type: mealType,
+        is_vegetarian: isVegetarian,
+        mess_id: messId,
+      };
+
+      let response;
+      
+      if (editId) {
+        const { data, error } = await supabase
+          .from('menu_items')
+          .update(menuItem)
+          .eq('id', editId)
+          .eq('mess_id', messId)
+          .select();
+        
+        if (error) throw error;
+        response = data;
+        
         toast({
-          title: "Success",
-          description: "Menu item updated successfully",
+          title: 'Success',
+          description: 'Menu item updated successfully.',
         });
       } else {
-        // Create new item
-        await MenuItemsApi.create({
-          mess_id: messId,
-          name: values.name,
-          description: values.description,
-          day_of_week: values.day_of_week,
-          meal_type: values.meal_type,
-          is_vegetarian: values.is_vegetarian
-        });
-
+        const { data, error } = await supabase
+          .from('menu_items')
+          .insert(menuItem)
+          .select();
+        
+        if (error) throw error;
+        response = data;
+        
         toast({
-          title: "Success",
-          description: "Menu item added successfully",
+          title: 'Success',
+          description: 'Menu item added successfully.',
         });
       }
 
-      setOpenDialog(false);
-      setEditingItem(null);
-      form.reset();
-      fetchMenuItems();
-    } catch (error) {
-      console.error("Error saving menu item:", error);
+      // Reset form
+      setName('');
+      setDescription('');
+      setDayOfWeek(DAYS_OF_WEEK[0]);
+      setMealType(MEAL_TYPES[0]);
+      setIsVegetarian(false);
+      setEditId(null);
+      setIsOpen(false);
+      
+      await fetchMenuItems();
+    } catch (error: any) {
+      console.error('Error saving menu item:', error);
       toast({
-        title: "Error",
-        description: "Failed to save menu item",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save menu item. ' + error.message,
+        variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (item: MenuItem) => {
+    setName(item.name);
+    setDescription(item.description || '');
+    setDayOfWeek(item.day_of_week);
+    setMealType(item.meal_type);
+    setIsVegetarian(item.is_vegetarian);
+    setEditId(item.id);
+    setIsOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this menu item?")) {
-      try {
-        await MenuItemsApi.delete(id);
-        fetchMenuItems();
-        toast({
-          title: "Success",
-          description: "Menu item deleted successfully",
-        });
-      } catch (error) {
-        console.error("Error deleting menu item:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete menu item",
-          variant: "destructive",
-        });
-      }
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id)
+        .eq('mess_id', messId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'Menu item deleted successfully.',
+      });
+      
+      await fetchMenuItems();
+    } catch (error) {
+      console.error('Error deleting menu item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete menu item.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const allFilteredItems = menuItems.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const filteredItems = searchQuery 
-    ? allFilteredItems 
-    : menuItems.filter(
-        (item) =>
-          item.day_of_week === currentView.day && 
-          item.meal_type === currentView.meal
-      );
-
-  if (loading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
-  }
+  const handleAddNew = () => {
+    setName('');
+    setDescription('');
+    setDayOfWeek(DAYS_OF_WEEK[0]);
+    setMealType(MEAL_TYPES[0]);
+    setIsVegetarian(false);
+    setEditId(null);
+    setIsOpen(true);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Utensils className="h-5 w-5" />
-          <h2 className="text-xl font-semibold dark:text-white">Menu Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Menu Management</h2>
+          <p className="text-muted-foreground">
+            Manage your mess menu for different days and meal times
+          </p>
         </div>
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => setEditingItem(null)}
-              className="bg-primary hover:bg-primary/90 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Menu Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingItem ? "Edit Menu Item" : "Add Menu Item"}
-              </DialogTitle>
-              <DialogDescription className="dark:text-gray-400">
-                Enter the details for the menu item
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="dark:text-gray-300">Item Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Paneer Butter Masala, Dal, etc." 
-                          {...field} 
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="dark:text-gray-300">Description (optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Add any special notes about the dish"
-                          className="resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          {...field} 
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="day_of_week"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">Day of Week</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                              <SelectValue placeholder="Select day" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                            {daysOfWeek.map((day) => (
-                              <SelectItem key={day} value={day} className="dark:text-white dark:focus:bg-gray-700">
-                                {day}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="meal_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">Meal Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                              <SelectValue placeholder="Select meal" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                            {mealTypes.map((meal) => (
-                              <SelectItem key={meal} value={meal} className="dark:text-white dark:focus:bg-gray-700">
-                                {meal}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="is_vegetarian"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 dark:border-gray-700 dark:bg-gray-800/50">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="dark:text-gray-300">Vegetarian</FormLabel>
-                        <p className="text-sm text-muted-foreground dark:text-gray-400">
-                          Mark this item as vegetarian
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
-                    {editingItem ? "Update" : "Add"} Menu Item
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleAddNew} className="flex items-center gap-2">
+          <PlusCircle className="h-4 w-4" />
+          <span>Add Menu Item</span>
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_1fr] lg:grid-cols-[1fr_2fr]">
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search menu items..."
-              className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          {!searchQuery && (
-            <div className="grid gap-2">
-              <div>
-                <h3 className="text-sm font-medium leading-none dark:text-gray-300 mb-2">Day of Week</h3>
-                <Select 
-                  value={currentView.day} 
-                  onValueChange={(day) => setCurrentView({...currentView, day})}
-                >
-                  <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <SelectValue placeholder="Day" />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                    {daysOfWeek.map((day) => (
-                      <SelectItem key={day} value={day} className="dark:text-white dark:focus:bg-gray-700">
-                        {day}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium leading-none dark:text-gray-300 mb-2">Meal Type</h3>
-                <Select 
-                  value={currentView.meal} 
-                  onValueChange={(meal) => setCurrentView({...currentView, meal})}
-                >
-                  <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                    <SelectValue placeholder="Meal" />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                    {mealTypes.map((meal) => (
-                      <SelectItem key={meal} value={meal} className="dark:text-white dark:focus:bg-gray-700">
-                        {meal}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-        </div>
-
+      <div className="flex flex-wrap gap-4 mb-4">
         <div>
-          <h3 className="text-lg font-medium mb-3 dark:text-white flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            {searchQuery ? "Search Results" : `${currentView.day} - ${currentView.meal}`}
-          </h3>
-          {filteredItems.length > 0 ? (
-            <div className="rounded-md border dark:border-gray-700 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/50 dark:bg-gray-700">
-                  <TableRow>
-                    <TableHead className="dark:text-gray-300">Item Name</TableHead>
-                    {searchQuery && (
-                      <>
-                        <TableHead className="dark:text-gray-300">Day</TableHead>
-                        <TableHead className="dark:text-gray-300">Meal</TableHead>
-                      </>
-                    )}
-                    <TableHead className="dark:text-gray-300">Description</TableHead>
-                    <TableHead className="dark:text-gray-300">Type</TableHead>
-                    <TableHead className="text-right dark:text-gray-300">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="dark:bg-gray-800">
-                  {filteredItems.map((item) => (
-                    <TableRow key={item.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
-                      <TableCell className="dark:text-gray-300 font-medium">{item.name}</TableCell>
-                      {searchQuery && (
-                        <>
-                          <TableCell className="dark:text-gray-300">{item.day_of_week}</TableCell>
-                          <TableCell className="dark:text-gray-300">{item.meal_type}</TableCell>
-                        </>
-                      )}
-                      <TableCell className="dark:text-gray-300">{item.description || "-"}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            item.is_vegetarian
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                          }`}
-                        >
-                          {item.is_vegetarian ? "Veg" : "Non-Veg"}
+          <Select
+            value={selectedDay || ""}
+            onValueChange={(value) => setSelectedDay(value || null)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by day" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All days</SelectItem>
+              {DAYS_OF_WEEK.map((day) => (
+                <SelectItem key={day} value={day}>
+                  {day}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Select
+            value={selectedMeal || ""}
+            onValueChange={(value) => setSelectedMeal(value || null)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by meal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All meals</SelectItem>
+              {MEAL_TYPES.map((meal) => (
+                <SelectItem key={meal} value={meal}>
+                  {meal}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Menu Items</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Spinner className="h-8 w-8" />
+            </div>
+          ) : menuItems.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Day</TableHead>
+                  <TableHead>Meal</TableHead>
+                  <TableHead>Item Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Vegetarian</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {menuItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.day_of_week}</TableCell>
+                    <TableCell>{item.meal_type}</TableCell>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {item.description || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {item.is_vegetarian ? (
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                          Yes
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right">
+                      ) : (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
+                          No
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          onClick={() => {
-                            setEditingItem(item);
-                            setOpenDialog(true);
-                          }}
-                          className="dark:text-gray-300 dark:hover:bg-gray-600"
+                          onClick={() => handleEdit(item)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
                           onClick={() => handleDelete(item.id)}
-                          className="dark:text-gray-300 dark:hover:bg-gray-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
-              <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="font-medium">No menu items found {!searchQuery && `for ${currentView.day} - ${currentView.meal}`}.</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No menu items found.</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {searchQuery ? "Try different search terms or " : ""}
-                Click "Add Menu Item" to create your first item.
+                Add your first menu item to get started.
               </p>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editId ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
+            <DialogDescription>
+              Enter the details for the menu item
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="name">Item Name</label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter item name"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="description">Description (optional)</label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter description"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="day">Day of Week</label>
+                  <Select
+                    value={dayOfWeek}
+                    onValueChange={setDayOfWeek}
+                  >
+                    <SelectTrigger id="day">
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <SelectItem key={day} value={day}>
+                          {day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="meal">Meal Type</label>
+                  <Select
+                    value={mealType}
+                    onValueChange={setMealType}
+                  >
+                    <SelectTrigger id="meal">
+                      <SelectValue placeholder="Select meal type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEAL_TYPES.map((meal) => (
+                        <SelectItem key={meal} value={meal}>
+                          {meal}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="vegetarian"
+                  checked={isVegetarian}
+                  onCheckedChange={(checked) => setIsVegetarian(checked === true)}
+                />
+                <label
+                  htmlFor="vegetarian"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Mark this item as vegetarian
+                </label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                {isSubmitting
+                  ? editId
+                    ? 'Updating...'
+                    : 'Adding...'
+                  : editId
+                    ? 'Update Item'
+                    : 'Add Item'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

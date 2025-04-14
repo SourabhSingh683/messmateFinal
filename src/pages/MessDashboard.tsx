@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Spinner } from "@/components/ui/spinner";
@@ -20,6 +20,7 @@ import AnnouncementSection from "@/components/mess-dashboard/AnnouncementSection
 import SubscriptionPlansSection from "@/components/mess-dashboard/SubscriptionPlansSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/context/ThemeContext";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
   Package, 
@@ -27,20 +28,26 @@ import {
   MessageSquare, 
   Megaphone, 
   BadgePlus,
-  ChevronLeft
+  ChevronLeft,
+  Home
 } from "lucide-react";
 
 const MessDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [messService, setMessService] = useState(null);
+  const [messService, setMessService] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("customers");
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     const fetchMessService = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -51,6 +58,13 @@ const MessDashboard = () => {
 
         if (error) {
           console.error("Error fetching mess service:", error);
+          if (error.code !== 'PGRST116') { // Not found error
+            toast({
+              title: "Error",
+              description: "Failed to load your mess service. Please try again.",
+              variant: "destructive"
+            });
+          }
         } else {
           setMessService(data);
         }
@@ -64,10 +78,16 @@ const MessDashboard = () => {
     fetchMessService();
   }, [user]);
 
+  const handleNavigation = (path: string) => {
+    setIsNavigating(true);
+    navigate(path);
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen dark:bg-gray-900">
-        <Spinner className="h-8 w-8" />
+      <div className="flex flex-col justify-center items-center min-h-screen dark:bg-gray-900">
+        <Spinner className="h-8 w-8 mb-4" />
+        <p className="text-center text-gray-500 dark:text-gray-400">Loading your dashboard...</p>
       </div>
     );
   }
@@ -79,10 +99,10 @@ const MessDashboard = () => {
           <Button 
             variant="ghost" 
             className="mr-2" 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/")}
           >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="ml-1">Back</span>
+            <Home className="h-5 w-5 mr-2" />
+            <span>Home</span>
           </Button>
           <ThemeToggle />
         </div>
@@ -90,7 +110,7 @@ const MessDashboard = () => {
           <h1 className="text-2xl font-bold mb-4">You don't have a mess service yet</h1>
           <p className="mb-8 text-gray-600 dark:text-gray-400">Create your mess service to access the dashboard features.</p>
           <button
-            onClick={() => navigate("/create-mess")}
+            onClick={() => handleNavigation("/create-mess")}
             className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
           >
             Create Mess Service
@@ -106,10 +126,11 @@ const MessDashboard = () => {
         <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/")}
+            disabled={isNavigating}
           >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="ml-1">Back</span>
+            <Home className="h-5 w-5 mr-2" />
+            <span>Home</span>
           </Button>
           <h1 className="text-3xl font-bold dark:text-white">Mess Owner Dashboard</h1>
         </div>
