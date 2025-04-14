@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -49,7 +48,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// Define types for our data structures
 interface Customer {
   id: string;
   student_id: string;
@@ -58,10 +56,9 @@ interface Customer {
   email: string;
   created_at: string;
   mess_id: string;
-  subscription_status: 'active' | 'inactive' | 'pending';
+  subscription_status: string;
 }
 
-// Form schema for adding a new customer
 const customerSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
@@ -81,7 +78,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Initialize the form
   const form = useForm<z.infer<typeof customerSchema>>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -99,7 +95,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     try {
       setLoading(true);
       
-      // Fetch students who have subscribed to this mess
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -107,7 +102,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           student_id,
           mess_id,
           status,
-          profiles:student_id (
+          profiles:student_id(
             id,
             first_name,
             last_name,
@@ -120,7 +115,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         throw error;
       }
 
-      // Map the data to our Customer interface
       const formattedCustomers: Customer[] = data.map((item) => ({
         id: item.id,
         student_id: item.student_id,
@@ -149,13 +143,11 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     try {
       setIsSubmitting(true);
       
-      // First, create a new user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
           first_name: values.first_name,
           last_name: values.last_name,
-          email: values.email,
           role: 'student',
         })
         .select('id')
@@ -163,7 +155,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
 
       if (profileError) throw profileError;
 
-      // Now create a subscription for this user
       const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
@@ -171,7 +162,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           mess_id: messId,
           status: 'active',
           start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
       if (subscriptionError) throw subscriptionError;
@@ -202,7 +193,6 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     try {
       setIsSubmitting(true);
       
-      // Delete the subscription first
       const { error } = await supabase
         .from('subscriptions')
         .delete()
