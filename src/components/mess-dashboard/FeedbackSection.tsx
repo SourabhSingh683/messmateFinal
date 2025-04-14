@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { FeedbackApi } from "@/utils/supabaseRawApi";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -10,18 +10,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Star } from "lucide-react";
+import { Search, MessageSquare, Star, RefreshCw } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Review {
   id: string;
-  user_id: string;
-  mess_id: string;
   rating: number;
-  comment: string | null;
+  comment: string;
   created_at: string;
-  user: {
+  profiles: {
     first_name: string;
     last_name: string;
   };
@@ -34,6 +33,7 @@ interface FeedbackSectionProps {
 const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,28 +43,13 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("reviews")
-        .select(`
-          *,
-          user:user_id (
-            first_name,
-            last_name
-          )
-        `)
-        .eq("mess_id", messId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setReviews(data || []);
+      const data = await FeedbackApi.getByMessId(messId);
+      setReviews(data as Review[] || []);
     } catch (error) {
       console.error("Error fetching reviews:", error);
       toast({
         title: "Error",
-        description: "Failed to load reviews",
+        description: "Failed to load feedback",
         variant: "destructive",
       });
     } finally {
@@ -73,19 +58,24 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
   };
 
   const renderStars = (rating: number) => {
-    return (
-      <div className="flex">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-4 w-4 ${
-              star <= rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-    );
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < rating 
+            ? "fill-yellow-400 text-yellow-400" 
+            : "fill-none text-gray-400 dark:text-gray-600"
+        }`}
+      />
+    ));
   };
+
+  const filteredReviews = reviews.filter(
+    (review) =>
+      review.profiles.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      review.profiles.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (review.comment && review.comment.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   if (loading) {
     return (
@@ -100,39 +90,72 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <MessageSquare className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Customer Feedback</h2>
+          <h2 className="text-xl font-semibold dark:text-white">Customer Feedback</h2>
         </div>
-        <Button onClick={fetchReviews}>Refresh</Button>
+        <Button 
+          onClick={fetchReviews}
+          variant="outline"
+          size="icon"
+          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600"
+        >
+          <RefreshCw className="h-4 w-4" />
+          <span className="sr-only">Refresh</span>
+        </Button>
       </div>
 
-      {reviews.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Comment</TableHead>
-              <TableHead>Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reviews.map((review) => (
-              <TableRow key={review.id}>
-                <TableCell>
-                  {review.user.first_name} {review.user.last_name}
-                </TableCell>
-                <TableCell>{renderStars(review.rating)}</TableCell>
-                <TableCell>{review.comment || "No comment provided"}</TableCell>
-                <TableCell>
-                  {new Date(review.created_at).toLocaleDateString()}
-                </TableCell>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search feedback..."
+            className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {filteredReviews.length > 0 ? (
+        <div className="rounded-md border dark:border-gray-700 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50 dark:bg-gray-700">
+              <TableRow>
+                <TableHead className="dark:text-gray-300">Customer</TableHead>
+                <TableHead className="dark:text-gray-300">Rating</TableHead>
+                <TableHead className="dark:text-gray-300">Comment</TableHead>
+                <TableHead className="dark:text-gray-300">Date</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="dark:bg-gray-800">
+              {filteredReviews.map((review) => (
+                <TableRow key={review.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
+                  <TableCell className="dark:text-gray-300 font-medium">
+                    {review.profiles.first_name} {review.profiles.last_name}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex">
+                      {renderStars(review.rating)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="dark:text-gray-300 max-w-md">
+                    {review.comment || "No comment"}
+                  </TableCell>
+                  <TableCell className="dark:text-gray-300">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
-        <div className="text-center p-8 border rounded-md">
-          <p>No reviews yet. Reviews will appear here when customers provide feedback.</p>
+        <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
+          <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="font-medium">No feedback yet.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            When customers leave reviews, they will appear here.
+          </p>
         </div>
       )}
     </div>

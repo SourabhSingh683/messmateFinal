@@ -18,6 +18,7 @@ import FeedbackSection from "@/components/mess-dashboard/FeedbackSection";
 import AnnouncementSection from "@/components/mess-dashboard/AnnouncementSection";
 import SubscriptionPlansSection from "@/components/mess-dashboard/SubscriptionPlansSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/context/ThemeContext";
 import { 
   Users, 
   Package, 
@@ -30,8 +31,10 @@ import {
 const MessDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [messService, setMessService] = useState(null);
+  const [activeTab, setActiveTab] = useState("customers");
 
   useEffect(() => {
     const fetchMessService = async () => {
@@ -70,14 +73,19 @@ const MessDashboard = () => {
   if (!messService) {
     return (
       <div className="container mx-auto p-8 text-center dark:bg-gray-900 dark:text-white min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">You don't have a mess service yet</h1>
-        <p className="mb-8">Create your mess service to access the dashboard features.</p>
-        <button
-          onClick={() => navigate("/create-mess")}
-          className="bg-primary text-white px-4 py-2 rounded"
-        >
-          Create Mess Service
-        </button>
+        <div className="flex justify-end mb-4">
+          <ThemeToggle />
+        </div>
+        <div className="max-w-md mx-auto mt-16 p-8 rounded-lg border dark:border-gray-700 shadow-lg dark:bg-gray-800/50 backdrop-blur-sm">
+          <h1 className="text-2xl font-bold mb-4">You don't have a mess service yet</h1>
+          <p className="mb-8 text-gray-600 dark:text-gray-400">Create your mess service to access the dashboard features.</p>
+          <button
+            onClick={() => navigate("/create-mess")}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
+          >
+            Create Mess Service
+          </button>
+        </div>
       </div>
     );
   }
@@ -89,35 +97,58 @@ const MessDashboard = () => {
         <ThemeToggle />
       </div>
       
-      <Tabs defaultValue="customers" className="w-full">
-        <TabsList className="grid grid-cols-6 mb-8">
-          <TabsTrigger value="customers" className="flex items-center gap-2">
+      <Tabs 
+        defaultValue={activeTab} 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-8 bg-white/10 dark:bg-gray-800/60 backdrop-blur-sm border border-white/20 dark:border-gray-700 rounded-lg p-1">
+          <TabsTrigger 
+            value="customers" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Customers</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="inventory" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Inventory</span>
           </TabsTrigger>
-          <TabsTrigger value="menu" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="menu" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <Utensils className="h-4 w-4" />
             <span className="hidden sm:inline">Menu</span>
           </TabsTrigger>
-          <TabsTrigger value="feedback" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="feedback" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <MessageSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Feedback</span>
           </TabsTrigger>
-          <TabsTrigger value="announcements" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="announcements" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <Megaphone className="h-4 w-4" />
             <span className="hidden sm:inline">Announcements</span>
           </TabsTrigger>
-          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="subscriptions" 
+            className="flex items-center gap-2 data-[state=active]:bg-white/20 dark:data-[state=active]:bg-gray-700"
+          >
             <BadgePlus className="h-4 w-4" />
             <span className="hidden sm:inline">Subscriptions</span>
           </TabsTrigger>
         </TabsList>
 
-        <Card className="border border-muted shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <Card className="border border-white/10 dark:border-gray-700 shadow-lg backdrop-blur-sm bg-white/5 dark:bg-gray-800/50">
           <CardHeader>
             <CardTitle className="text-2xl font-bold dark:text-white flex items-center gap-2">
               {messService.name}
@@ -128,27 +159,27 @@ const MessDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TabsContent value="customers">
+            <TabsContent value="customers" className="mt-0">
               <CustomerManagement messId={messService.id} />
             </TabsContent>
             
-            <TabsContent value="inventory">
+            <TabsContent value="inventory" className="mt-0">
               <InventoryManagement messId={messService.id} />
             </TabsContent>
             
-            <TabsContent value="menu">
+            <TabsContent value="menu" className="mt-0">
               <MenuManagement messId={messService.id} />
             </TabsContent>
             
-            <TabsContent value="feedback">
+            <TabsContent value="feedback" className="mt-0">
               <FeedbackSection messId={messService.id} />
             </TabsContent>
             
-            <TabsContent value="announcements">
+            <TabsContent value="announcements" className="mt-0">
               <AnnouncementSection messId={messService.id} />
             </TabsContent>
             
-            <TabsContent value="subscriptions">
+            <TabsContent value="subscriptions" className="mt-0">
               <SubscriptionPlansSection messId={messService.id} />
             </TabsContent>
           </CardContent>

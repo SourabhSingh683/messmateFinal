@@ -11,7 +11,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Base headers for all requests
 const baseHeaders = {
   "apikey": SUPABASE_ANON_KEY,
-  "Content-Type": "application/json"
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
 };
 
 // Generic fetch function with proper typing
@@ -31,7 +32,8 @@ async function fetchFromSupabase<T>(
   });
   
   if (!response.ok) {
-    throw new Error(`Supabase API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Supabase API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   // For DELETE requests or other requests that might not return content
@@ -54,14 +56,14 @@ export const SubscriptionPlansApi = {
     fetchFromSupabase<any>(`/rest/v1/subscription_plans`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   update: (id: string, data: any) => 
     fetchFromSupabase<any>(`/rest/v1/subscription_plans?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   delete: (id: string) => 
@@ -79,14 +81,14 @@ export const MealScheduleApi = {
     fetchFromSupabase<any>(`/rest/v1/meal_schedule`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   update: (id: string, data: any) => 
     fetchFromSupabase<any>(`/rest/v1/meal_schedule?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   delete: (id: string) => 
@@ -107,7 +109,7 @@ export const PaymentsApi = {
     fetchFromSupabase<any>(`/rest/v1/payments`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     })
 };
 
@@ -120,14 +122,14 @@ export const AnnouncementsApi = {
     fetchFromSupabase<any>(`/rest/v1/announcements`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   update: (id: string, data: any) => 
     fetchFromSupabase<any>(`/rest/v1/announcements?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   delete: (id: string) => 
@@ -145,14 +147,14 @@ export const InventoryItemsApi = {
     fetchFromSupabase<any>(`/rest/v1/inventory_items`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   update: (id: string, data: any) => 
     fetchFromSupabase<any>(`/rest/v1/inventory_items?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   delete: (id: string) => 
@@ -170,18 +172,50 @@ export const MenuItemsApi = {
     fetchFromSupabase<any>(`/rest/v1/menu_items`, {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   update: (id: string, data: any) => 
     fetchFromSupabase<any>(`/rest/v1/menu_items?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: { "Prefer": "return=minimal" }
+      headers: { "Prefer": "return=representation" }
     }),
   
   delete: (id: string) => 
     fetchFromSupabase<any>(`/rest/v1/menu_items?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { "Prefer": "return=minimal" }
+    })
+};
+
+// API for fetching customers (subscriptions with user profiles)
+export const CustomersApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/subscriptions?mess_id=eq.${messId}&select=id,start_date,end_date,status,student_id,profiles:student_id(id,first_name,last_name)`)
+};
+
+// API for feedback/reviews
+export const FeedbackApi = {
+  getByMessId: (messId: string) => 
+    fetchFromSupabase<any[]>(`/rest/v1/reviews?mess_id=eq.${messId}&select=*,profiles:user_id(first_name,last_name)&order=created_at.desc`),
+  
+  create: (data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { "Prefer": "return=representation" }
+    }),
+  
+  update: (id: string, data: any) => 
+    fetchFromSupabase<any>(`/rest/v1/reviews?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: { "Prefer": "return=representation" }
+    }),
+  
+  delete: (id: string) => 
+    fetchFromSupabase<any>(`/rest/v1/reviews?id=eq.${id}`, {
       method: 'DELETE',
       headers: { "Prefer": "return=minimal" }
     })

@@ -1,86 +1,52 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 43 41% 95%;
-    --foreground: 27 68% 32%;
-
-    --card: 43 41% 97%;
-    --card-foreground: 27 68% 32%;
-
-    --popover: 43 41% 97%;
-    --popover-foreground: 27 68% 32%;
-
-    --primary: 27 68% 32%;
-    --primary-foreground: 43 41% 97%;
-
-    --secondary: 27 40% 92%;
-    --secondary-foreground: 27 68% 32%;
-
-    --muted: 27 40% 92%;
-    --muted-foreground: 27 40% 45%;
-
-    --accent: 27 40% 92%;
-    --accent-foreground: 27 68% 32%;
-
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 43 41% 97%;
-
-    --border: 27 25% 85%;
-    --input: 27 25% 85%;
-    --ring: 27 68% 32%;
-
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 30 15% 15%;
-    --foreground: 32 56% 96%;
-
-    --card: 30 15% 15%;
-    --card-foreground: 32 56% 96%;
-
-    --popover: 30 15% 15%;
-    --popover-foreground: 32 56% 96%;
-
-    --primary: 27 60% 40%;
-    --primary-foreground: 32 56% 96%;
-
-    --secondary: 30 20% 25%;
-    --secondary-foreground: 32 56% 96%;
-
-    --muted: 30 20% 25%;
-    --muted-foreground: 32 56% 85%;
-
-    --accent: 30 20% 25%;
-    --accent-foreground: 32 56% 96%;
-
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 32 56% 96%;
-
-    --border: 30 20% 25%;
-    --input: 30 20% 25%;
-    --ring: 32 56% 85%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
   }
 }
 
@@ -88,16 +54,19 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-messmate-beige text-messmate-brown dark;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
 }
 
-.messmate-btn-primary {
-  @apply bg-messmate-brown text-messmate-beige hover:bg-messmate-brown-dark px-6 py-2 rounded-md transition-colors duration-300 font-medium;
+.glass {
+  @apply backdrop-blur-md bg-white/5 border border-white/10 dark:bg-gray-800/30 dark:border-gray-700/50;
 }
 
-.messmate-btn-secondary {
-  @apply bg-messmate-beige border border-messmate-brown text-messmate-brown hover:bg-messmate-beige-dark px-6 py-2 rounded-md transition-colors duration-300 font-medium;
+.glass-card {
+  @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl dark:bg-gray-800/40 dark:border-gray-700/50;
+}
+
+.button-glass {
+  @apply bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-700/50;
 }
