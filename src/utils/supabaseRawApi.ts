@@ -35,7 +35,7 @@ const getAuthHeaders = () => {
 };
 
 // Generic fetch function with proper typing
-async function fetchFromSupabase<T>(
+export async function fetchFromSupabase<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
