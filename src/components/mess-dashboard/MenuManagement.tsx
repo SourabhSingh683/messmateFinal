@@ -256,6 +256,16 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
     setIsOpen(true);
   };
 
+  const handleDayFilter = (value: string) => {
+    // If value is empty string, set to null instead
+    setSelectedDay(value || null);
+  };
+
+  const handleMealFilter = (value: string) => {
+    // If value is empty string, set to null instead
+    setSelectedMeal(value || null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -274,14 +284,14 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
       <div className="flex flex-wrap gap-4 mb-4">
         <div>
           <Select
-            value={selectedDay || ""}
-            onValueChange={(value) => setSelectedDay(value || null)}
+            value={selectedDay || "all-days"}
+            onValueChange={handleDayFilter}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by day" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All days</SelectItem>
+              <SelectItem value="all-days">All days</SelectItem>
               {DAYS_OF_WEEK.map((day) => (
                 <SelectItem key={day} value={day}>
                   {day}
@@ -292,14 +302,14 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
         </div>
         <div>
           <Select
-            value={selectedMeal || ""}
-            onValueChange={(value) => setSelectedMeal(value || null)}
+            value={selectedMeal || "all-meals"}
+            onValueChange={handleMealFilter}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by meal" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All meals</SelectItem>
+              <SelectItem value="all-meals">All meals</SelectItem>
               {MEAL_TYPES.map((meal) => (
                 <SelectItem key={meal} value={meal}>
                   {meal}
