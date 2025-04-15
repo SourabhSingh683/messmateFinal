@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { FeedbackApi } from "@/utils/supabaseRawApi";
+import { supabase } from "@/integrations/supabase/client";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -13,16 +13,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MessageSquare, Star, RefreshCw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Review {
   id: string;
   rating: number;
-  comment: string;
+  comment: string | null;
   created_at: string;
+  updated_at: string;
   profiles: {
     first_name: string;
     last_name: string;
+    avatar_url?: string;
   };
 }
 
@@ -34,6 +37,8 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [averageRating, setAverageRating] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,9 +48,38 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const data = await FeedbackApi.getByMessId(messId);
-      setReviews(data as Review[] || []);
-    } catch (error) {
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
+        .eq('mess_id', messId)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        setError(error.message);
+        throw error;
+      }
+      
+      if (data) {
+        setReviews(data);
+        
+        // Calculate average rating
+        if (data.length > 0) {
+          const total = data.reduce((sum, review) => sum + review.rating, 0);
+          setAverageRating(Math.round((total / data.length) * 10) / 10);
+        } else {
+          setAverageRating(0);
+        }
+      }
+    } catch (error: any) {
       console.error("Error fetching reviews:", error);
       toast({
         title: "Error",
@@ -84,6 +118,25 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
       </div>
     );
   }
+  
+  if (error) {
+    return (
+      <div className="text-center py-6 border rounded-lg">
+        <MessageSquare className="h-12 w-12 mx-auto mb-4 text-destructive" />
+        <p className="font-medium text-destructive">Error loading feedback</p>
+        <p className="text-sm text-muted-foreground mt-1">{error}</p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="mt-4"
+          onClick={fetchReviews}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -102,6 +155,26 @@ const FeedbackSection = ({ messId }: FeedbackSectionProps) => {
           <span className="sr-only">Refresh</span>
         </Button>
       </div>
+      
+      {reviews.length > 0 && (
+        <Card className="mb-4">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 dark:bg-primary/20 rounded-lg p-4 flex items-center justify-center">
+                <div className="text-3xl font-bold text-primary">{averageRating.toFixed(1)}</div>
+              </div>
+              <div>
+                <div className="flex mb-1">
+                  {renderStars(Math.round(averageRating))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Based on {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-4">
         <div className="relative">

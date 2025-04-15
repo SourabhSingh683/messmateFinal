@@ -11,16 +11,19 @@ import {
   Payment, 
   MealSchedule 
 } from '@/types/database';
-import { MealScheduleApi, PaymentsApi } from '@/utils/supabaseRawApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft, CalendarDays, CreditCard, Clock, MapPin, Coffee } from 'lucide-react';
+import { ChevronLeft, CalendarDays, CreditCard, Clock, MapPin, Coffee, MessageSquare } from 'lucide-react';
+import RateFeedbackForm from '@/components/student-dashboard/RateFeedbackForm';
+import MessReviews from '@/components/student-dashboard/MessReviews';
+import { Spinner } from '@/components/ui/spinner';
 
 const StudentDashboard = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [activeMessId, setActiveMessId] = useState<string | null>(null);
+  const [activeMessName, setActiveMessName] = useState<string>('');
   const [messServices, setMessServices] = useState<MessService[]>([]);
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState<MealSchedule[]>([]);
@@ -28,6 +31,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -48,15 +52,21 @@ const StudentDashboard = () => {
   const fetchActiveSubscriptions = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
           *,
           mess_services(*)
         `)
-        .eq('student_id', user?.id);
+        .eq('student_id', user?.id)
+        .eq('status', 'active');
 
-      if (error) throw error;
+      if (error) {
+        setError(error.message);
+        throw error;
+      }
       
       if (data) {
         console.log("Fetched subscriptions:", data);
@@ -77,6 +87,7 @@ const StudentDashboard = () => {
             // Set the first mess as active if there is one
             if (messData.length > 0) {
               setActiveMessId(messData[0].id);
+              setActiveMessName(messData[0].name);
             }
           }
         }
@@ -97,8 +108,17 @@ const StudentDashboard = () => {
     if (!user) return;
     
     try {
-      const payments = await PaymentsApi.getByStudentId(user.id);
-      setPayments(payments);
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('payment_date', { ascending: false });
+        
+      if (error) throw error;
+      
+      if (data) {
+        setPayments(data);
+      }
     } catch (error: any) {
       console.error("Error fetching payments:", error.message);
       toast({
@@ -113,21 +133,17 @@ const StudentDashboard = () => {
     if (!activeMessId) return;
     
     try {
-      const schedule = await MealScheduleApi.getByMessId(activeMessId);
+      const { data, error } = await supabase
+        .from('meal_schedule')
+        .select('*')
+        .eq('mess_id', activeMessId)
+        .order('day_of_week', { ascending: true });
+        
+      if (error) throw error;
       
-      // Create a map for mess names
-      const messNameMap: Record<string, string> = {};
-      messServices.forEach(mess => {
-        messNameMap[mess.id] = mess.name;
-      });
-      
-      // Augment schedule with mess names
-      const augmentedSchedule = schedule.map(item => ({
-        ...item,
-        mess_name: messNameMap[item.mess_id] || 'Unknown Mess'
-      }));
-      
-      setSchedule(augmentedSchedule);
+      if (data) {
+        setSchedule(data);
+      }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
       toast({
@@ -150,11 +166,22 @@ const StudentDashboard = () => {
     }
   };
 
+  const handleMessChange = (messId: string) => {
+    const mess = messServices.find(m => m.id === messId);
+    setActiveMessId(messId);
+    setActiveMessName(mess?.name || '');
+  };
+
+  const handleFeedbackSubmitted = () => {
+    // Re-fetch subscriptions to update any ratings
+    fetchActiveSubscriptions();
+  };
+
   if (loading) {
     return (
       <Layout>
         <div className="container mx-auto flex justify-center items-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-messmate-brown"></div>
+          <Spinner className="h-12 w-12" />
         </div>
       </Layout>
     );
@@ -188,7 +215,7 @@ const StudentDashboard = () => {
           onValueChange={setActiveTab} 
           className="w-full"
         >
-          <TabsList className="grid grid-cols-3 mb-6">
+          <TabsList className="grid grid-cols-4 mb-6">
             <TabsTrigger value="subscriptions" className="flex items-center gap-1">
               <CreditCard className="h-4 w-4" />
               <span>Subscriptions</span>
@@ -196,6 +223,10 @@ const StudentDashboard = () => {
             <TabsTrigger value="mealSchedule" className="flex items-center gap-1">
               <CalendarDays className="h-4 w-4" />
               <span>Meal Schedule</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" />
+              <span>Rate & Reviews</span>
             </TabsTrigger>
             <TabsTrigger value="payments" className="flex items-center gap-1">
               <CreditCard className="h-4 w-4" />
@@ -297,7 +328,7 @@ const StudentDashboard = () => {
                               key={mess.id}
                               variant={activeMessId === mess.id ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setActiveMessId(mess.id)}
+                              onClick={() => handleMessChange(mess.id)}
                               className={activeMessId === mess.id ? 
                                 "bg-[#8B4513] hover:bg-[#5C2C0C] text-white" : 
                                 "border-[#C4A484] text-[#8B4513]"
@@ -350,6 +381,69 @@ const StudentDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="feedback">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {subscriptions.length > 0 ? (
+                <>
+                  <div>
+                    {messServices.length > 1 && (
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-[#5C2C0C] mb-2">Select Mess Service:</label>
+                        <div className="flex flex-wrap gap-2">
+                          {messServices.map(mess => (
+                            <Button
+                              key={mess.id}
+                              variant={activeMessId === mess.id ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleMessChange(mess.id)}
+                              className={activeMessId === mess.id ? 
+                                "bg-[#8B4513] hover:bg-[#5C2C0C] text-white" : 
+                                "border-[#C4A484] text-[#8B4513]"
+                              }
+                            >
+                              {mess.name}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {user && activeMessId && (
+                      <RateFeedbackForm 
+                        messId={activeMessId}
+                        messName={activeMessName}
+                        userId={user.id}
+                        onFeedbackSubmitted={handleFeedbackSubmitted}
+                      />
+                    )}
+                  </div>
+                  
+                  <div>
+                    {activeMessId && (
+                      <MessReviews 
+                        messId={activeMessId}
+                        messName={activeMessName}
+                      />
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-2 text-center py-8 bg-[#FDF6E3]/50 rounded-lg">
+                  <h2 className="text-xl font-semibold mb-2 text-[#5C2C0C]">No Active Subscriptions</h2>
+                  <p className="text-[#8B4513] mb-4">
+                    You need to subscribe to a mess service before you can leave a review.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/discover')} 
+                    className="bg-[#8B4513] hover:bg-[#5C2C0C] text-white"
+                  >
+                    Discover Mess Services
+                  </Button>
+                </div>
+              )}
+            </div>
           </TabsContent>
           
           <TabsContent value="payments">

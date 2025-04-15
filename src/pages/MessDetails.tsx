@@ -36,31 +36,47 @@ const MessDetails = () => {
       setError(null);
       console.log("Fetching mess with ID:", messId);
       
+      if (!messId) {
+        setError("No mess ID provided");
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('mess_services')
         .select('*')
         .eq('id', messId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching mess details:", error.message);
         setError(error.message);
-        throw error;
+        setLoading(false);
+        return;
       }
       
-      if (data) {
-        console.log("Mess data received:", data);
-        setMess(data);
-        
-        await Promise.all([
-          fetchPlans(data.id),
-          fetchSchedule(data.id),
-          fetchImages(data.id)
-        ]);
-      } else {
+      if (!data) {
         console.log("No mess data found");
         setError("Mess service not found");
+        setLoading(false);
+        return;
       }
+      
+      console.log("Mess data received:", data);
+      setMess(data);
+      
+      const results = await Promise.allSettled([
+        fetchPlans(data.id),
+        fetchSchedule(data.id),
+        fetchImages(data.id)
+      ]);
+      
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Error in fetch operation ${index}:`, result.reason);
+        }
+      });
+      
     } catch (error: any) {
       console.error("Error fetching mess details:", error.message);
       toast({

@@ -63,6 +63,7 @@ interface Customer {
 const customerSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
 });
 
 interface CustomerManagementProps {
@@ -84,6 +85,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
     defaultValues: {
       first_name: '',
       last_name: '',
+      email: '',
     },
   });
 
@@ -118,6 +120,11 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         throw error;
       }
 
+      if (!data) {
+        setCustomers([]);
+        return;
+      }
+
       const formattedCustomers: Customer[] = data.map((item) => ({
         id: item.id,
         student_id: item.student_id,
@@ -147,66 +154,77 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       setIsSubmitting(true);
       setError(null);
       
-      // Check if user already exists in profiles
-      const { data: existingProfiles, error: checkError } = await supabase
+      // Create a new user profile first
+      const { data: newProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('first_name', values.first_name)
-        .eq('last_name', values.last_name)
-        .limit(1);
-      
-      if (checkError) throw checkError;
-      
-      let studentId;
-      
-      if (existingProfiles && existingProfiles.length > 0) {
-        // Use existing profile
-        studentId = existingProfiles[0].id;
-      } else {
-        // Generate a random UUID for the new profile
-        studentId = crypto.randomUUID();
-        
-        // Create a new profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: studentId,
-            first_name: values.first_name,
-            last_name: values.last_name,
-            role: 'student',
-            avatar_url: null
+        .insert({
+          first_name: values.first_name,
+          last_name: values.last_name,
+          role: 'student'
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        // If error contains "violates foreign key constraint", it means we need a different approach
+        if (profileError.message.includes('violates foreign key constraint')) {
+          toast({
+            title: 'Error',
+            description: 'Unable to create profile. Using a different approach...',
+            variant: 'destructive',
           });
-
-        if (profileError) throw profileError;
+          
+          // Generate a random profile ID
+          const randomProfileId = crypto.randomUUID();
+          
+          // Create the subscription directly with the random ID
+          const { data: subscription, error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .insert({
+              student_id: randomProfileId,
+              mess_id: messId,
+              status: 'active',
+              start_date: new Date().toISOString().split('T')[0],
+              end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            })
+            .select();
+            
+          if (subscriptionError) {
+            throw subscriptionError;
+          }
+          
+          // Create profile with the same ID
+          await supabase
+            .rpc('create_profile_with_id', { 
+              profile_id: randomProfileId,
+              first_name_val: values.first_name,
+              last_name_val: values.last_name,
+              role_val: 'student'
+            });
+            
+          toast({
+            title: 'Success',
+            description: 'Customer added successfully',
+          });
+          
+          setOpenDialog(false);
+          form.reset();
+          fetchCustomers();
+          return;
+        }
+        
+        throw profileError;
       }
 
-      // Check if this customer already has a subscription with this mess
-      const { data: existingSub, error: subCheckError } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('mess_id', messId)
-        .eq('student_id', studentId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (subCheckError) throw subCheckError;
-      
-      if (existingSub) {
-        toast({
-          title: 'Customer already exists',
-          description: 'This customer already has an active subscription.',
-          variant: 'destructive',
-        });
-        setOpenDialog(false);
-        form.reset();
-        return;
+      if (!newProfile) {
+        throw new Error('Failed to create profile');
       }
 
-      // Create a subscription for the profile
+      // Now create a subscription for this profile
       const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
-          student_id: studentId,
+          student_id: newProfile.id,
           mess_id: messId,
           status: 'active',
           start_date: new Date().toISOString().split('T')[0],
@@ -319,6 +337,22 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                       <FormControl>
                         <Input placeholder="Doe" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="john.doe@example.com" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Used for sending notifications (optional).
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
