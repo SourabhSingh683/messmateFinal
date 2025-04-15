@@ -25,7 +25,8 @@ CREATE OR REPLACE FUNCTION public.create_profile_with_id(
   first_name_val text,
   last_name_val text,
   role_val user_role
-) RETURNS void
+)
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
