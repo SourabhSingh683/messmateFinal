@@ -11,7 +11,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 25 60% 30%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -28,25 +28,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 20 50% 10%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 20 40% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 20 45% 15%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 25 80% 50%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 25 30% 22%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 25 30% 20%;
+    --muted-foreground: 215 20.2% 75%;
+    --accent: 25 30% 25%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 25 30% 25%;
+    --input: 25 30% 25%;
+    --ring: 25 75% 50%;
   }
 }
 
@@ -62,19 +62,19 @@
 /* Enhanced glassmorphism effects */
 .glass {
   @apply backdrop-blur-md bg-white/10 border border-white/10 transition-all duration-300
-         dark:bg-gray-800/40 dark:border-gray-700/50 dark:shadow-md;
+         dark:bg-[#5C2C0C]/40 dark:border-[#8B4513]/50 dark:shadow-md;
 }
 
 .glass-card {
   @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300
          hover:shadow-2xl hover:bg-white/15
-         dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-800/50;
+         dark:bg-[#5C2C0C]/40 dark:border-[#8B4513]/50 dark:hover:bg-[#5C2C0C]/50;
 }
 
 .button-glass {
   @apply bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-200
          hover:bg-white/20 hover:shadow-md hover:scale-105
-         dark:bg-gray-800/40 dark:border-gray-700/50 dark:hover:bg-gray-700/50;
+         dark:bg-[#5C2C0C]/40 dark:border-[#8B4513]/50 dark:hover:bg-[#5C2C0C]/50;
 }
 
 /* Animation classes */
@@ -89,7 +89,7 @@
 /* Create a new navigation bar class */
 .nav-glass {
   @apply backdrop-blur-md bg-white/70 border-b border-white/20 shadow-sm
-         dark:bg-gray-900/70 dark:border-gray-800/50;
+         dark:bg-[#3A1E0C]/90 dark:border-[#8B4513]/50;
 }
 
 /* Responsive utilities */
@@ -99,5 +99,14 @@
 
 /* Input focus styles */
 .input-focus {
-  @apply focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200;
+  @apply focus:ring-2 focus:ring-[#8B4513]/50 focus:border-[#8B4513]/50 transition-all duration-200;
+}
+
+/* Custom button styles */
+.messmate-btn-primary {
+  @apply bg-[#8B4513] hover:bg-[#5C2C0C] text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-[#8B4513] transform hover:scale-105;
+}
+
+.messmate-btn-secondary {
+  @apply bg-white text-[#8B4513] border-2 border-[#8B4513] hover:bg-[#FDF6E3] font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105;
 }

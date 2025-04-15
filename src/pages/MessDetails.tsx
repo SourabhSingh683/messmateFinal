@@ -42,40 +42,36 @@ const MessDetails = () => {
         return;
       }
       
-      const { data, error } = await supabase
+      const { data: messData, error: messError } = await supabase
         .from('mess_services')
         .select('*')
         .eq('id', messId)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching mess details:", error.message);
-        setError(error.message);
+      if (messError) {
+        console.error("Error fetching mess details:", messError.message);
+        setError(messError.message);
         setLoading(false);
         return;
       }
       
-      if (!data) {
+      if (!messData) {
         console.log("No mess data found");
         setError("Mess service not found");
         setLoading(false);
         return;
       }
       
-      console.log("Mess data received:", data);
-      setMess(data);
+      console.log("Mess data received:", messData);
+      setMess(messData);
       
-      const results = await Promise.allSettled([
-        fetchPlans(data.id),
-        fetchSchedule(data.id),
-        fetchImages(data.id)
+      await Promise.all([
+        fetchPlans(messData.id),
+        fetchSchedule(messData.id),
+        fetchImages(messData.id)
       ]);
       
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.error(`Error in fetch operation ${index}:`, result.reason);
-        }
-      });
+      setLoading(false);
       
     } catch (error: any) {
       console.error("Error fetching mess details:", error.message);
@@ -85,7 +81,6 @@ const MessDetails = () => {
         variant: "destructive"
       });
       setError(error.message);
-    } finally {
       setLoading(false);
     }
   };

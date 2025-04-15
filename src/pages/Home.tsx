@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -161,7 +160,7 @@ const Home = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-[#8B4513]/90 to-[#5C2C0C]/90 text-white">
+      <section className="py-16 bg-gradient-to-r from-[#8B4513] to-[#5C2C0C] text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Find Your Perfect Mess?
@@ -173,7 +172,7 @@ const Home = () => {
             <Button 
               onClick={() => navigate('/discover')}
               size="lg"
-              className="bg-white text-[#5C2C0C] hover:bg-gray-100 px-8"
+              className="bg-white text-[#5C2C0C] hover:bg-gray-100 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-2 border-white"
             >
               <Search className="mr-2 h-5 w-5" />
               Find a Mess
@@ -182,7 +181,7 @@ const Home = () => {
               onClick={() => navigate('/signup')}
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white/10 px-8"
+              className="border-3 border-white text-white hover:bg-white/20 px-8 py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
               Create an Account
             </Button>
