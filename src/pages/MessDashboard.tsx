@@ -34,7 +34,7 @@ import {
 
 const MessDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { theme } = useTheme();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ const MessDashboard = () => {
         .from("mess_services")
         .select("*")
         .eq("owner_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching mess service:", error);
@@ -83,9 +83,12 @@ const MessDashboard = () => {
             variant: "destructive"
           });
         }
-      } else {
+      } else if (data) {
         console.log("Mess service found:", data);
         setMessService(data);
+      } else {
+        console.log("No mess service found");
+        setMessService(null);
       }
     } catch (error: any) {
       console.error("Error:", error);
@@ -97,17 +100,12 @@ const MessDashboard = () => {
 
   const handleNavigation = (path: string) => {
     setIsNavigating(true);
-    setTimeout(() => {
-      navigate(path);
-    }, 100);
+    navigate(path);
   };
 
   // Handle back navigation safely
   const handleBack = () => {
-    setIsNavigating(true);
-    setTimeout(() => {
-      navigate("/");
-    }, 100); 
+    navigate("/");
   };
 
   if (loading) {
@@ -127,7 +125,6 @@ const MessDashboard = () => {
             variant="ghost" 
             className="mr-2" 
             onClick={handleBack}
-            disabled={isNavigating}
           >
             <Home className="h-5 w-5 mr-2" />
             <span>Home</span>
@@ -157,7 +154,6 @@ const MessDashboard = () => {
             variant="ghost" 
             className="mr-2" 
             onClick={handleBack}
-            disabled={isNavigating}
           >
             <Home className="h-5 w-5 mr-2" />
             <span>Home</span>
@@ -170,7 +166,6 @@ const MessDashboard = () => {
           <button
             onClick={() => handleNavigation("/create-mess")}
             className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
-            disabled={isNavigating}
           >
             Create Mess Service
           </button>
@@ -186,7 +181,6 @@ const MessDashboard = () => {
           <Button 
             variant="ghost" 
             onClick={handleBack}
-            disabled={isNavigating}
           >
             <Home className="h-5 w-5 mr-2" />
             <span>Home</span>

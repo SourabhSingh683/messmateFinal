@@ -37,7 +37,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus, Edit, Trash2 } from 'lucide-react';
+import { UserPlus, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +76,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const [openAlertDialog, setOpenAlertDialog] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof customerSchema>>({
@@ -93,6 +94,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Query subscriptions with a join to profiles to get customer information
       const { data, error } = await supabase
@@ -112,6 +114,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
         .eq('mess_id', messId);
 
       if (error) {
+        setError(error.message);
         throw error;
       }
 
@@ -128,6 +131,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       setCustomers(formattedCustomers);
     } catch (error: any) {
       console.error('Error fetching customers:', error.message);
+      setError(error.message);
       toast({
         title: 'Error',
         description: 'Failed to load customers. Please try again.',
@@ -141,33 +145,71 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const onSubmit = async (values: z.infer<typeof customerSchema>) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       
-      // Generate a random UUID for the new profile
-      const id = crypto.randomUUID();
-      
-      // Create a new profile
-      const { data: profileData, error: profileError } = await supabase
+      // Check if user already exists in profiles
+      const { data: existingProfiles, error: checkError } = await supabase
         .from('profiles')
-        .insert({
-          id: id, // Using the generated UUID
-          first_name: values.first_name,
-          last_name: values.last_name,
-          role: 'student',
-          avatar_url: null
-        })
         .select('id')
-        .single();
+        .eq('first_name', values.first_name)
+        .eq('last_name', values.last_name)
+        .limit(1);
+      
+      if (checkError) throw checkError;
+      
+      let studentId;
+      
+      if (existingProfiles && existingProfiles.length > 0) {
+        // Use existing profile
+        studentId = existingProfiles[0].id;
+      } else {
+        // Generate a random UUID for the new profile
+        studentId = crypto.randomUUID();
+        
+        // Create a new profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: studentId,
+            first_name: values.first_name,
+            last_name: values.last_name,
+            role: 'student',
+            avatar_url: null
+          });
 
-      if (profileError) throw profileError;
+        if (profileError) throw profileError;
+      }
 
-      // Create a subscription for the new profile
+      // Check if this customer already has a subscription with this mess
+      const { data: existingSub, error: subCheckError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('mess_id', messId)
+        .eq('student_id', studentId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (subCheckError) throw subCheckError;
+      
+      if (existingSub) {
+        toast({
+          title: 'Customer already exists',
+          description: 'This customer already has an active subscription.',
+          variant: 'destructive',
+        });
+        setOpenDialog(false);
+        form.reset();
+        return;
+      }
+
+      // Create a subscription for the profile
       const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
-          student_id: id, // Using the same UUID as the profile ID
+          student_id: studentId,
           mess_id: messId,
           status: 'active',
-          start_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+          start_date: new Date().toISOString().split('T')[0],
           end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         });
 
@@ -183,6 +225,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       fetchCustomers();
     } catch (error: any) {
       console.error('Error adding customer:', error.message);
+      setError(error.message);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add customer',
@@ -198,6 +241,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
 
     try {
       setIsSubmitting(true);
+      setError(null);
       
       const { error } = await supabase
         .from('subscriptions')
@@ -216,6 +260,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       fetchCustomers();
     } catch (error: any) {
       console.error('Error deleting customer:', error.message);
+      setError(error.message);
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete customer',
@@ -244,6 +289,12 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                 Fill in the customer details below. This will create a new customer account.
               </DialogDescription>
             </DialogHeader>
+            {error && (
+              <div className="bg-destructive/10 p-3 rounded-md mb-4 flex items-start">
+                <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+                <div className="text-sm text-destructive">{error}</div>
+              </div>
+            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -292,6 +343,20 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           {loading ? (
             <div className="flex justify-center items-center h-40">
               <Spinner className="h-8 w-8" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-6 border border-destructive/20 rounded-lg">
+              <AlertCircle className="h-10 w-10 mx-auto mb-2 text-destructive" />
+              <p className="text-destructive font-medium">Error loading customers</p>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => fetchCustomers()}
+              >
+                Try Again
+              </Button>
             </div>
           ) : customers.length > 0 ? (
             <Table>

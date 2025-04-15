@@ -1,412 +1,353 @@
 
-import { useState, useEffect } from "react";
-import { AnnouncementsApi } from "@/utils/supabaseRawApi";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Megaphone,
-  CalendarDays,
-  Search
-} from "lucide-react";
-import { Announcement } from "@/types/database";
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { Megaphone, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Spinner } from '@/components/ui/spinner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  mess_id: string;
+}
 
 interface AnnouncementSectionProps {
   messId: string;
 }
 
-const formSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  content: z.string().min(5, "Content must be at least 5 characters"),
-  start_date: z.string().min(1, "Start date is required"),
-  end_date: z.string().min(1, "End date is required"),
-});
-
 const AnnouncementSection = ({ messId }: AnnouncementSectionProps) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      content: "",
-      start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-    },
-  });
+  // Form state
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  );
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAnnouncements();
   }, [messId]);
 
-  useEffect(() => {
-    if (editingAnnouncement) {
-      form.reset({
-        title: editingAnnouncement.title,
-        content: editingAnnouncement.content,
-        start_date: new Date(editingAnnouncement.start_date)
-          .toISOString()
-          .split("T")[0],
-        end_date: new Date(editingAnnouncement.end_date)
-          .toISOString()
-          .split("T")[0],
-      });
-    } else {
-      form.reset({
-        title: "",
-        content: "",
-        start_date: new Date().toISOString().split("T")[0],
-        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-      });
-    }
-  }, [editingAnnouncement, form]);
-
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const data = await AnnouncementsApi.getByMessId(messId);
-      setAnnouncements(data as Announcement[] || []);
-    } catch (error) {
-      console.error("Error fetching announcements:", error);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('mess_id', messId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setError(error.message);
+        throw error;
+      }
+
+      setAnnouncements(data || []);
+    } catch (error: any) {
+      console.error('Error fetching announcements:', error);
+      setError(error.message);
       toast({
-        title: "Error",
-        description: "Failed to load announcements",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load announcements',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      if (editingAnnouncement) {
+      setIsSubmitting(true);
+      setError(null);
+      
+      const announcementData = {
+        title,
+        content,
+        start_date: startDate,
+        end_date: endDate,
+        mess_id: messId,
+      };
+
+      if (editingId) {
         // Update existing announcement
-        await AnnouncementsApi.update(editingAnnouncement.id, {
-          title: values.title,
-          content: values.content,
-          start_date: values.start_date,
-          end_date: values.end_date
-        });
+        const { error } = await supabase
+          .from('announcements')
+          .update(announcementData)
+          .eq('id', editingId)
+          .eq('mess_id', messId);
+
+        if (error) throw error;
 
         toast({
-          title: "Success",
-          description: "Announcement updated successfully",
+          title: 'Success',
+          description: 'Announcement updated successfully',
         });
       } else {
         // Create new announcement
-        await AnnouncementsApi.create({
-          mess_id: messId,
-          title: values.title,
-          content: values.content,
-          start_date: values.start_date,
-          end_date: values.end_date
-        });
+        const { error } = await supabase
+          .from('announcements')
+          .insert(announcementData);
+
+        if (error) throw error;
 
         toast({
-          title: "Success",
-          description: "Announcement created successfully",
+          title: 'Success',
+          description: 'Announcement created successfully',
         });
       }
 
-      setOpenDialog(false);
-      setEditingAnnouncement(null);
-      form.reset();
+      // Reset form and close dialog
+      resetForm();
+      setIsDialogOpen(false);
       fetchAnnouncements();
-    } catch (error) {
-      console.error("Error saving announcement:", error);
+    } catch (error: any) {
+      console.error('Error saving announcement:', error);
+      setError(error.message);
       toast({
-        title: "Error",
-        description: "Failed to save announcement",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save announcement: ' + error.message,
+        variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (announcement: Announcement) => {
+    setTitle(announcement.title);
+    setContent(announcement.content);
+    setStartDate(announcement.start_date);
+    setEndDate(announcement.end_date);
+    setEditingId(announcement.id);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this announcement?")) {
+    if (confirm('Are you sure you want to delete this announcement?')) {
       try {
-        await AnnouncementsApi.delete(id);
-        fetchAnnouncements();
+        setError(null);
+        
+        const { error } = await supabase
+          .from('announcements')
+          .delete()
+          .eq('id', id)
+          .eq('mess_id', messId);
+
+        if (error) throw error;
+
         toast({
-          title: "Success",
-          description: "Announcement deleted successfully",
+          title: 'Success',
+          description: 'Announcement deleted successfully',
         });
-      } catch (error) {
-        console.error("Error deleting announcement:", error);
+        
+        fetchAnnouncements();
+      } catch (error: any) {
+        console.error('Error deleting announcement:', error);
+        setError(error.message);
         toast({
-          title: "Error",
-          description: "Failed to delete announcement",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to delete announcement: ' + error.message,
+          variant: 'destructive',
         });
       }
     }
   };
 
-  const isActive = (startDate: string, endDate: string) => {
-    const now = new Date();
-    return (
-      new Date(startDate) <= now && new Date(endDate) >= now
-    );
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setStartDate(new Date().toISOString().slice(0, 10));
+    setEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    setEditingId(null);
   };
 
-  const filteredAnnouncements = announcements.filter(announcement => 
-    announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    announcement.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="flex justify-center p-4">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
-  }
+  const handleAddNew = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Megaphone className="h-5 w-5" />
-          <h2 className="text-xl font-semibold dark:text-white">Announcements</h2>
+          <h2 className="text-xl font-semibold">Announcements</h2>
         </div>
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogTrigger asChild>
+        <Button onClick={handleAddNew}>
+          Create Announcement
+        </Button>
+      </div>
+
+      {error && (
+        <div className="bg-destructive/10 p-4 rounded-md mb-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+          <div className="flex flex-col">
+            <div className="text-sm font-medium text-destructive">Error loading announcements</div>
+            <div className="text-sm text-destructive/80">{error}</div>
             <Button 
-              onClick={() => setEditingAnnouncement(null)}
-              className="bg-primary hover:bg-primary/90 text-white"
+              variant="outline" 
+              size="sm" 
+              className="mt-2 self-start"
+              onClick={() => fetchAnnouncements()}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Announcement
+              Try Again
             </Button>
-          </DialogTrigger>
-          <DialogContent className="dark:bg-gray-800 dark:text-white sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
-              </DialogTitle>
-              <DialogDescription className="dark:text-gray-400">
-                Create announcements for your customers
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="dark:text-gray-300">Title</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Holiday Notice, Special Menu, etc." 
-                          {...field} 
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="dark:text-gray-300">Content</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter announcement details here..."
-                          className="min-h-[100px] dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">Start Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field} 
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="dark:text-gray-300">End Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field} 
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
-                    {editingAnnouncement ? "Update" : "Create"} Announcement
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search announcements..."
-            className="pl-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          </div>
         </div>
-      </div>
+      )}
 
-      {filteredAnnouncements.length > 0 ? (
-        <div className="rounded-md border dark:border-gray-700 overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50 dark:bg-gray-700">
-              <TableRow>
-                <TableHead className="dark:text-gray-300">Title</TableHead>
-                <TableHead className="dark:text-gray-300">Content</TableHead>
-                <TableHead className="dark:text-gray-300">Duration</TableHead>
-                <TableHead className="dark:text-gray-300">Status</TableHead>
-                <TableHead className="text-right dark:text-gray-300">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="dark:bg-gray-800">
-              {filteredAnnouncements.map((announcement) => (
-                <TableRow key={announcement.id} className="dark:border-gray-700 dark:hover:bg-gray-700">
-                  <TableCell className="font-medium dark:text-gray-300">{announcement.title}</TableCell>
-                  <TableCell className="max-w-[300px] truncate dark:text-gray-300">
-                    {announcement.content}
-                  </TableCell>
-                  <TableCell className="dark:text-gray-300">
-                    <div className="flex items-center space-x-1">
-                      <CalendarDays className="h-3 w-3" />
-                      <span>
-                        {new Date(announcement.start_date).toLocaleDateString()} - {new Date(announcement.end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        isActive(announcement.start_date, announcement.end_date)
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : new Date(announcement.start_date) > new Date()
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      {isActive(announcement.start_date, announcement.end_date)
-                        ? "Active"
-                        : new Date(announcement.start_date) > new Date()
-                        ? "Upcoming"
-                        : "Expired"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditingAnnouncement(announcement);
-                        setOpenDialog(true);
-                      }}
-                      className="dark:text-gray-300 dark:hover:bg-gray-600"
-                    >
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Spinner className="h-8 w-8" />
+        </div>
+      ) : announcements.length > 0 ? (
+        <div className="grid gap-4">
+          {announcements.map((announcement) => (
+            <Card key={announcement.id}>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg">{announcement.title}</CardTitle>
+                  <div className="flex space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(announcement)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(announcement.id)}
-                      className="dark:text-gray-300 dark:hover:bg-gray-600"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(announcement.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Active: {new Date(announcement.start_date).toLocaleDateString()} to {new Date(announcement.end_date).toLocaleDateString()}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap">{announcement.content}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : (
-        <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
+        <div className="text-center py-12 border rounded-md">
           <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="font-medium">No announcements yet.</p>
+          <p className="font-medium">No announcements found</p>
           <p className="text-sm text-muted-foreground mt-1">
-            {searchQuery ? "Try different search terms or " : ""}
-            Create an announcement to inform your customers.
+            Create your first announcement to notify your customers about important updates.
           </p>
         </div>
       )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) resetForm();
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? 'Edit Announcement' : 'Create Announcement'}
+            </DialogTitle>
+            <DialogDescription>
+              Create announcements for your customers
+            </DialogDescription>
+          </DialogHeader>
+          {error && (
+            <div className="bg-destructive/10 p-3 rounded-md mb-4 flex items-start">
+              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+              <div className="text-sm text-destructive">{error}</div>
+            </div>
+          )}
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="title">Title</label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="content">Content</label>
+                <Textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="start-date">Start Date</label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="end-date">End Date</label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
+                {isSubmitting 
+                  ? (editingId ? 'Updating...' : 'Creating...') 
+                  : (editingId ? 'Update Announcement' : 'Create Announcement')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

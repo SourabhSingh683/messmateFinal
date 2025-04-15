@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -10,7 +9,8 @@ import { MessService, SubscriptionPlan, MealSchedule } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Star, ChevronLeft } from 'lucide-react';
+import { MapPin, Star, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
 
 const MessDetails = () => {
   const { messId } = useParams<{ messId: string }>();
@@ -27,15 +27,13 @@ const MessDetails = () => {
   useEffect(() => {
     if (messId) {
       fetchMessDetails();
-      fetchPlans();
-      fetchSchedule();
-      fetchImages();
     }
   }, [messId]);
 
   const fetchMessDetails = async () => {
     try {
       setLoading(true);
+      setError(null);
       console.log("Fetching mess with ID:", messId);
       
       const { data, error } = await supabase
@@ -53,6 +51,12 @@ const MessDetails = () => {
       if (data) {
         console.log("Mess data received:", data);
         setMess(data);
+        
+        await Promise.all([
+          fetchPlans(data.id),
+          fetchSchedule(data.id),
+          fetchImages(data.id)
+        ]);
       } else {
         console.log("No mess data found");
         setError("Mess service not found");
@@ -70,15 +74,13 @@ const MessDetails = () => {
     }
   };
 
-  const fetchPlans = async () => {
-    if (!messId) return;
-    
+  const fetchPlans = async (id: string) => {
     try {
-      console.log("Fetching plans for mess ID:", messId);
+      console.log("Fetching plans for mess ID:", id);
       const { data, error } = await supabase
         .from('subscription_plans')
         .select('*')
-        .eq('mess_id', messId)
+        .eq('mess_id', id)
         .eq('is_active', true)
         .order('price', { ascending: true });
 
@@ -88,7 +90,7 @@ const MessDetails = () => {
       }
       
       if (data) {
-        console.log("Plans data received:", data);
+        console.log("Plans data received:", data.length);
         setPlans(data);
       }
     } catch (error: any) {
@@ -96,15 +98,13 @@ const MessDetails = () => {
     }
   };
 
-  const fetchSchedule = async () => {
-    if (!messId) return;
-    
+  const fetchSchedule = async (id: string) => {
     try {
-      console.log("Fetching schedule for mess ID:", messId);
+      console.log("Fetching schedule for mess ID:", id);
       const { data, error } = await supabase
         .from('meal_schedule')
         .select('*')
-        .eq('mess_id', messId)
+        .eq('mess_id', id)
         .order('day_of_week', { ascending: true });
 
       if (error) {
@@ -113,7 +113,7 @@ const MessDetails = () => {
       }
       
       if (data) {
-        console.log("Schedule data received:", data);
+        console.log("Schedule data received:", data.length);
         setSchedule(data);
       }
     } catch (error: any) {
@@ -121,13 +121,13 @@ const MessDetails = () => {
     }
   };
 
-  const fetchImages = async () => {
+  const fetchImages = async (id: string) => {
     try {
-      console.log("Fetching images for mess ID:", messId);
+      console.log("Fetching images for mess ID:", id);
       const { data, error } = await supabase
         .from('mess_images')
         .select('image_url')
-        .eq('mess_id', messId);
+        .eq('mess_id', id);
 
       if (error) {
         console.error("Error fetching mess images:", error.message);
@@ -169,13 +169,32 @@ const MessDetails = () => {
       const selectedPlan = plans.find(p => p.id === planId);
       if (!selectedPlan) return;
 
+      const { data: existingSub, error: subCheckError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('mess_id', mess.id)
+        .eq('student_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (subCheckError) throw subCheckError;
+      
+      if (existingSub) {
+        toast({
+          title: "Already subscribed",
+          description: "You already have an active subscription with this mess.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('subscriptions')
         .insert({
           mess_id: mess.id,
           student_id: user.id,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000).toISOString(),
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: new Date(Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           status: 'active'
         })
         .select();
@@ -183,7 +202,6 @@ const MessDetails = () => {
       if (error) throw error;
       
       if (data && data[0]) {
-        // Insert payment record
         const { error: paymentError } = await supabase
           .from('payments')
           .insert({
@@ -222,7 +240,10 @@ const MessDetails = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow container mx-auto flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-messmate-brown"></div>
+          <div className="flex flex-col items-center">
+            <Spinner className="h-12 w-12 mb-4" />
+            <p className="text-muted-foreground">Loading mess details...</p>
+          </div>
         </main>
         <Footer />
       </div>
@@ -234,11 +255,14 @@ const MessDetails = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-12 text-center">
-          <h1 className="text-3xl font-bold mb-4">Error Loading Mess Details</h1>
-          <p className="text-muted-foreground mb-6">{error}</p>
-          <Button onClick={() => navigate('/discover')}>
-            Back to Discover
-          </Button>
+          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border">
+            <AlertCircle className="h-16 w-16 mx-auto mb-4 text-destructive" />
+            <h1 className="text-3xl font-bold mb-4">Error Loading Mess Details</h1>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button onClick={() => navigate('/discover')}>
+              Back to Discover
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>
@@ -250,11 +274,14 @@ const MessDetails = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-12 text-center">
-          <h1 className="text-3xl font-bold mb-4">Mess Not Found</h1>
-          <p className="text-muted-foreground mb-6">The mess service you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => navigate('/discover')}>
-            Back to Discover
-          </Button>
+          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border">
+            <AlertCircle className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
+            <h1 className="text-3xl font-bold mb-4">Mess Not Found</h1>
+            <p className="text-muted-foreground mb-6">The mess service you're looking for doesn't exist or has been removed.</p>
+            <Button onClick={() => navigate('/discover')}>
+              Back to Discover
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>

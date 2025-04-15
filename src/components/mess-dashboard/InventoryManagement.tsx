@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { InventoryItemsApi } from "@/utils/supabaseRawApi";
+import { supabase } from '@/integrations/supabase/client';
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,8 +32,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useToast } from "@/components/ui/use-toast";
-import { Plus, Edit, Trash2, Search, Package } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Edit, Trash2, Search, Package, AlertCircle } from "lucide-react";
 import { InventoryItem } from "@/types/database";
 
 interface InventoryManagementProps {
@@ -52,6 +52,8 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -86,10 +88,22 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const data = await InventoryItemsApi.getByMessId(messId);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('mess_id', messId);
+      
+      if (error) {
+        setError(error.message);
+        throw error;
+      }
+      
       setInventory(data as InventoryItem[] || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching inventory:", error);
+      setError(error.message);
       toast({
         title: "Error",
         description: "Failed to load inventory items",
@@ -102,13 +116,23 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      setIsSubmitting(true);
+      setError(null);
+      
       if (editingItem) {
         // Update existing item
-        await InventoryItemsApi.update(editingItem.id, {
-          name: values.name,
-          quantity: values.quantity,
-          unit: values.unit
-        });
+        const { error } = await supabase
+          .from('inventory_items')
+          .update({
+            name: values.name,
+            quantity: values.quantity,
+            unit: values.unit,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingItem.id)
+          .eq('mess_id', messId);
+
+        if (error) throw error;
 
         toast({
           title: "Success",
@@ -116,12 +140,16 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
         });
       } else {
         // Create new item
-        await InventoryItemsApi.create({
-          mess_id: messId,
-          name: values.name,
-          quantity: values.quantity,
-          unit: values.unit
-        });
+        const { error } = await supabase
+          .from('inventory_items')
+          .insert({
+            mess_id: messId,
+            name: values.name,
+            quantity: values.quantity,
+            unit: values.unit
+          });
+          
+        if (error) throw error;
 
         toast({
           title: "Success",
@@ -133,30 +161,42 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
       setEditingItem(null);
       form.reset();
       fetchInventory();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving inventory item:", error);
+      setError(error.message);
       toast({
         title: "Error",
-        description: "Failed to save inventory item",
+        description: "Failed to save inventory item: " + error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
-        await InventoryItemsApi.delete(id);
+        setError(null);
+        const { error } = await supabase
+          .from('inventory_items')
+          .delete()
+          .eq('id', id)
+          .eq('mess_id', messId);
+        
+        if (error) throw error;
+        
         fetchInventory();
         toast({
           title: "Success",
           description: "Inventory item deleted successfully",
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error deleting inventory item:", error);
+        setError(error.message);
         toast({
           title: "Error",
-          description: "Failed to delete inventory item",
+          description: "Failed to delete inventory item: " + error.message,
           variant: "destructive",
         });
       }
@@ -202,6 +242,12 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
                 Enter the details for the inventory item
               </DialogDescription>
             </DialogHeader>
+            {error && (
+              <div className="bg-destructive/10 p-3 rounded-md mb-4 flex items-start">
+                <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+                <div className="text-sm text-destructive">{error}</div>
+              </div>
+            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -260,8 +306,9 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
-                    {editingItem ? "Update" : "Add"} Item
+                  <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-white">
+                    {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
+                    {editingItem ? (isSubmitting ? "Updating..." : "Update") : (isSubmitting ? "Adding..." : "Add")} Item
                   </Button>
                 </DialogFooter>
               </form>
@@ -283,7 +330,25 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
         </div>
       </div>
 
-      {filteredInventory.length > 0 ? (
+      {error && (
+        <div className="bg-destructive/10 p-4 rounded-md mb-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+          <div className="flex flex-col">
+            <div className="text-sm font-medium text-destructive">Error loading inventory</div>
+            <div className="text-sm text-destructive/80">{error}</div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2 self-start"
+              onClick={() => fetchInventory()}
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!error && filteredInventory.length > 0 ? (
         <div className="rounded-md border dark:border-gray-700 overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/50 dark:bg-gray-700">
@@ -326,7 +391,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
             </TableBody>
           </Table>
         </div>
-      ) : (
+      ) : !error ? (
         <div className="text-center p-8 border rounded-md dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800/50">
           <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <p className="font-medium">No inventory items found.</p>
@@ -335,7 +400,7 @@ const InventoryManagement = ({ messId }: InventoryManagementProps) => {
             Add your first item to get started.
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

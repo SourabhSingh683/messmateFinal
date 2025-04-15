@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { MenuItemsApi } from '@/utils/supabaseRawApi';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Card,
   CardContent,
@@ -35,8 +35,7 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { PlusCircle, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
 
 const DAYS_OF_WEEK = [
@@ -72,6 +71,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedMeal, setSelectedMeal] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Form state
@@ -89,12 +89,17 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       let { data, error } = await supabase
         .from('menu_items')
         .select('*')
         .eq('mess_id', messId);
 
-      if (error) throw error;
+      if (error) {
+        setError(error.message);
+        throw error;
+      }
 
       // Filter by day and meal type if selected
       if (selectedDay) {
@@ -112,8 +117,9 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
       });
 
       setMenuItems(groupedData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching menu items:', error);
+      setError(error.message);
       toast({
         title: 'Error',
         description: 'Failed to load menu items.',
@@ -138,6 +144,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
 
     try {
       setIsSubmitting(true);
+      setError(null);
       
       const menuItem = {
         name,
@@ -148,31 +155,25 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
         mess_id: messId,
       };
 
-      let response;
-      
       if (editId) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('menu_items')
           .update(menuItem)
           .eq('id', editId)
-          .eq('mess_id', messId)
-          .select();
+          .eq('mess_id', messId);
         
         if (error) throw error;
-        response = data;
         
         toast({
           title: 'Success',
           description: 'Menu item updated successfully.',
         });
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('menu_items')
-          .insert(menuItem)
-          .select();
+          .insert(menuItem);
         
         if (error) throw error;
-        response = data;
         
         toast({
           title: 'Success',
@@ -192,6 +193,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
       await fetchMenuItems();
     } catch (error: any) {
       console.error('Error saving menu item:', error);
+      setError(error.message);
       toast({
         title: 'Error',
         description: 'Failed to save menu item. ' + error.message,
@@ -215,6 +217,8 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
   const handleDelete = async (id: string) => {
     try {
       setLoading(true);
+      setError(null);
+      
       const { error } = await supabase
         .from('menu_items')
         .delete()
@@ -229,11 +233,12 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
       });
       
       await fetchMenuItems();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting menu item:', error);
+      setError(error.message);
       toast({
         title: 'Error',
-        description: 'Failed to delete menu item.',
+        description: 'Failed to delete menu item. ' + error.message,
         variant: 'destructive',
       });
     } finally {
@@ -304,6 +309,24 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
           </Select>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 p-4 rounded-md mb-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+          <div className="flex flex-col">
+            <div className="text-sm font-medium text-destructive">Error loading menu items</div>
+            <div className="text-sm text-destructive/80">{error}</div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2 self-start"
+              onClick={() => fetchMenuItems()}
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -387,6 +410,12 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ messId }) => {
               Enter the details for the menu item
             </DialogDescription>
           </DialogHeader>
+          {error && (
+            <div className="bg-destructive/10 p-3 rounded-md mb-4 flex items-start">
+              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+              <div className="text-sm text-destructive">{error}</div>
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
