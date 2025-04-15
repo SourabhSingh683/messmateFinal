@@ -10,6 +10,7 @@ import { MessService, SubscriptionPlan, MealSchedule } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MapPin, Star, ChevronLeft } from 'lucide-react';
 
 const MessDetails = () => {
   const { messId } = useParams<{ messId: string }>();
@@ -21,6 +22,7 @@ const MessDetails = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (messId) {
@@ -34,16 +36,26 @@ const MessDetails = () => {
   const fetchMessDetails = async () => {
     try {
       setLoading(true);
+      console.log("Fetching mess with ID:", messId);
+      
       const { data, error } = await supabase
         .from('mess_services')
         .select('*')
         .eq('id', messId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching mess details:", error.message);
+        setError(error.message);
+        throw error;
+      }
       
       if (data) {
+        console.log("Mess data received:", data);
         setMess(data);
+      } else {
+        console.log("No mess data found");
+        setError("Mess service not found");
       }
     } catch (error: any) {
       console.error("Error fetching mess details:", error.message);
@@ -52,6 +64,7 @@ const MessDetails = () => {
         description: error.message,
         variant: "destructive"
       });
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -61,19 +74,21 @@ const MessDetails = () => {
     if (!messId) return;
     
     try {
-      // Using raw fetch to retrieve data from subscription_plans which isn't in the types
-      const response = await fetch(
-        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/subscription_plans?mess_id=eq.${messId}&is_active=eq.true&order=price.asc`,
-        {
-          headers: {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      console.log("Fetching plans for mess ID:", messId);
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('mess_id', messId)
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching subscription plans:", error.message);
+        throw error;
+      }
       
-      if (response.ok) {
-        const data: SubscriptionPlan[] = await response.json();
+      if (data) {
+        console.log("Plans data received:", data);
         setPlans(data);
       }
     } catch (error: any) {
@@ -85,19 +100,20 @@ const MessDetails = () => {
     if (!messId) return;
     
     try {
-      // Using raw fetch to retrieve data from meal_schedule which isn't in the types
-      const response = await fetch(
-        `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/meal_schedule?mess_id=eq.${messId}&order=day_of_week.asc`,
-        {
-          headers: {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      console.log("Fetching schedule for mess ID:", messId);
+      const { data, error } = await supabase
+        .from('meal_schedule')
+        .select('*')
+        .eq('mess_id', messId)
+        .order('day_of_week', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching meal schedule:", error.message);
+        throw error;
+      }
       
-      if (response.ok) {
-        const data: MealSchedule[] = await response.json();
+      if (data) {
+        console.log("Schedule data received:", data);
         setSchedule(data);
       }
     } catch (error: any) {
@@ -107,14 +123,19 @@ const MessDetails = () => {
 
   const fetchImages = async () => {
     try {
+      console.log("Fetching images for mess ID:", messId);
       const { data, error } = await supabase
         .from('mess_images')
         .select('image_url')
         .eq('mess_id', messId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching mess images:", error.message);
+        throw error;
+      }
       
       if (data) {
+        console.log("Images data received:", data.length);
         setImages(data.map(img => img.image_url));
       }
     } catch (error: any) {
@@ -162,30 +183,21 @@ const MessDetails = () => {
       if (error) throw error;
       
       if (data && data[0]) {
-        // Use raw fetch for insert into payments table which isn't in the types
-        const response = await fetch(
-          `https://wemmsixixuxppkxeluhw.supabase.co/rest/v1/payments`,
-          {
-            method: 'POST',
-            headers: {
-              "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlbW1zaXhpeHV4cHBreGVsdWh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTQ4NzEsImV4cCI6MjA2MDAzMDg3MX0._3nIUs_l0spO3Fd-d_TjhWW8Vm7yfS7dLAufU1sluFg",
-              "Content-Type": "application/json",
-              "Prefer": "return=minimal"
-            },
-            body: JSON.stringify({
-              subscription_id: data[0].id,
-              student_id: user.id,
-              mess_id: mess.id,
-              amount: selectedPlan.price,
-              payment_method: 'Online Payment',
-              status: 'completed',
-              transaction_id: `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-            })
-          }
-        );
+        // Insert payment record
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            subscription_id: data[0].id,
+            student_id: user.id,
+            mess_id: mess.id,
+            amount: selectedPlan.price,
+            payment_method: 'Online Payment',
+            status: 'completed',
+            transaction_id: `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+          });
         
-        if (!response.ok) {
-          throw new Error('Failed to record payment');
+        if (paymentError) {
+          throw paymentError;
         }
       }
 
@@ -211,6 +223,22 @@ const MessDetails = () => {
         <Navbar />
         <main className="flex-grow container mx-auto flex justify-center items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-messmate-brown"></div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container mx-auto px-4 py-12 text-center">
+          <h1 className="text-3xl font-bold mb-4">Error Loading Mess Details</h1>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button onClick={() => navigate('/discover')}>
+            Back to Discover
+          </Button>
         </main>
         <Footer />
       </div>
@@ -251,11 +279,9 @@ const MessDetails = () => {
           <Button 
             variant="outline" 
             onClick={() => navigate('/discover')}
-            className="mb-4"
+            className="mb-4 flex items-center"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
+            <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Discover
           </Button>
           
@@ -290,7 +316,10 @@ const MessDetails = () => {
               )}
               
               <h1 className="text-3xl font-bold mb-2">{mess.name}</h1>
-              <p className="text-muted-foreground mb-4">{mess.address}</p>
+              <p className="text-muted-foreground mb-4 flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                {mess.address}
+              </p>
               
               <div className="flex gap-2 mb-4">
                 {mess.is_vegetarian && (
@@ -352,7 +381,7 @@ const MessDetails = () => {
           <div className="mt-10">
             <h2 className="text-2xl font-bold mb-6">Meal Schedule</h2>
             {Object.keys(scheduleByDay).length > 0 ? (
-              <Tabs defaultValue={daysOrder[0]}>
+              <Tabs defaultValue={daysOrder.find(day => scheduleByDay[day]) || daysOrder[0]}>
                 <TabsList className="mb-4 flex-wrap">
                   {daysOrder.map(day => scheduleByDay[day] && (
                     <TabsTrigger key={day} value={day}>

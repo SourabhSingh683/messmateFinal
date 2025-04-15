@@ -28,8 +28,8 @@ import {
   MessageSquare, 
   Megaphone, 
   BadgePlus,
-  ChevronLeft,
-  Home
+  Home,
+  AlertTriangle
 } from "lucide-react";
 
 const MessDashboard = () => {
@@ -38,45 +38,62 @@ const MessDashboard = () => {
   const { theme } = useTheme();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [messService, setMessService] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("customers");
   const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
-    const fetchMessService = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    fetchMessService();
+  }, [user]);
+
+  const fetchMessService = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
       if (!user) {
         setLoading(false);
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .from("mess_services")
-          .select("*")
-          .eq("owner_id", user.id)
-          .single();
+      console.log("Fetching mess service for user ID:", user.id);
+      const { data, error } = await supabase
+        .from("mess_services")
+        .select("*")
+        .eq("owner_id", user.id)
+        .single();
 
-        if (error) {
-          console.error("Error fetching mess service:", error);
-          if (error.code !== 'PGRST116') { // Not found error
-            toast({
-              title: "Error",
-              description: "Failed to load your mess service. Please try again.",
-              variant: "destructive"
-            });
-          }
+      if (error) {
+        console.error("Error fetching mess service:", error);
+        
+        if (error.code === 'PGRST116') { // Not found error
+          console.log("No mess service found for this user");
+          setMessService(null);
         } else {
-          setMessService(data);
+          setError(error.message);
+          toast({
+            title: "Error",
+            description: "Failed to load your mess service. Please try again.",
+            variant: "destructive"
+          });
         }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.log("Mess service found:", data);
+        setMessService(data);
       }
-    };
-
-    fetchMessService();
-  }, [user]);
+    } catch (error: any) {
+      console.error("Error:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNavigation = (path: string) => {
     setIsNavigating(true);
@@ -98,6 +115,36 @@ const MessDashboard = () => {
       <div className="flex flex-col justify-center items-center min-h-screen dark:bg-gray-900">
         <Spinner className="h-8 w-8 mb-4" />
         <p className="text-center text-gray-500 dark:text-gray-400">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-8 text-center dark:bg-gray-900 dark:text-white min-h-screen">
+        <div className="flex justify-between items-center mb-6">
+          <Button 
+            variant="ghost" 
+            className="mr-2" 
+            onClick={handleBack}
+            disabled={isNavigating}
+          >
+            <Home className="h-5 w-5 mr-2" />
+            <span>Home</span>
+          </Button>
+          <ThemeToggle />
+        </div>
+        <div className="max-w-md mx-auto mt-16 p-8 rounded-lg border dark:border-gray-700 shadow-lg dark:bg-gray-800/50 backdrop-blur-sm">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+          <h1 className="text-2xl font-bold mb-4">Error Loading Dashboard</h1>
+          <p className="mb-8 text-gray-600 dark:text-gray-400">{error}</p>
+          <button
+            onClick={() => fetchMessService()}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

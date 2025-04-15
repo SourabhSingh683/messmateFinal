@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { MessService } from '@/types/database';
-import { ChevronLeft, MapPin, Search, Star, Loader } from 'lucide-react';
+import { ChevronLeft, MapPin, Search, Star, Loader, SlidersHorizontal } from 'lucide-react';
+import MessFilters from '@/components/discover/MessFilters';
 
 const Discover = () => {
   const [messServices, setMessServices] = useState<MessService[]>([]);
@@ -17,20 +18,66 @@ const Discover = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Filter states
+  const [priceRange, setPriceRange] = useState<[number, number]>([1000, 10000]);
+  const [maxDistance, setMaxDistance] = useState<number>(20);
+  const [vegOnly, setVegOnly] = useState<boolean>(false);
+  const [nonVegOnly, setNonVegOnly] = useState<boolean>(false);
+  const [minRating, setMinRating] = useState<number>(1);
+  
+  // Rating data (to be fetched later)
+  const [messRatings, setMessRatings] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchMessServices();
+    fetchRatings();
     getUserLocation();
   }, []);
+
+  const fetchRatings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('mess_id, rating');
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Calculate average ratings per mess
+        const ratingsMap: Record<string, {sum: number, count: number}> = {};
+        
+        data.forEach(review => {
+          if (!ratingsMap[review.mess_id]) {
+            ratingsMap[review.mess_id] = { sum: 0, count: 0 };
+          }
+          ratingsMap[review.mess_id].sum += review.rating;
+          ratingsMap[review.mess_id].count += 1;
+        });
+        
+        // Convert to average ratings
+        const averageRatings: Record<string, number> = {};
+        Object.keys(ratingsMap).forEach(messId => {
+          averageRatings[messId] = ratingsMap[messId].sum / ratingsMap[messId].count;
+        });
+        
+        setMessRatings(averageRatings);
+      }
+    } catch (error: any) {
+      console.error("Error fetching ratings:", error.message);
+    }
+  };
 
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          console.log("Got user location:", latitude, longitude);
           setUserLocation({ lat: latitude, lng: longitude });
           
           if (user) {
@@ -57,6 +104,7 @@ const Discover = () => {
 
   const saveUserLocation = async (latitude: number, longitude: number) => {
     try {
+      console.log("Saving user location:", latitude, longitude);
       const { error } = await supabase.rpc('update_user_location', {
         user_id: user?.id,
         user_latitude: latitude,
@@ -72,6 +120,7 @@ const Discover = () => {
   const fetchMessServices = async () => {
     try {
       setLoading(true);
+      console.log("Fetching mess services");
       const { data, error } = await supabase
         .from('mess_services')
         .select('*');
@@ -79,7 +128,7 @@ const Discover = () => {
       if (error) throw error;
       
       if (data) {
-        console.log("Fetched mess services:", data);
+        console.log("Fetched mess services:", data.length);
         setMessServices(data);
       }
     } catch (error: any) {
@@ -108,11 +157,49 @@ const Discover = () => {
     return distance;
   };
 
+  const resetFilters = () => {
+    setPriceRange([1000, 10000]);
+    setMaxDistance(20);
+    setVegOnly(false);
+    setNonVegOnly(false);
+    setMinRating(1);
+  };
+
+  const getMessRating = (messId: string) => {
+    return messRatings[messId] || 4.5; // Default to 4.5 if no ratings
+  };
+
   const filteredMessServices = messServices
-    .filter(mess => 
-      mess.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mess.address.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(mess => {
+      // Search term filter
+      const matchesSearch = mess.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           mess.address.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Price filter
+      const matchesPrice = mess.price_monthly >= priceRange[0] && mess.price_monthly <= priceRange[1];
+      
+      // Distance filter
+      let matchesDistance = true;
+      if (userLocation) {
+        const distance = calculateDistance(userLocation.lat, userLocation.lng, mess.latitude, mess.longitude);
+        matchesDistance = distance <= maxDistance;
+      }
+      
+      // Veg/Non-veg filter
+      let matchesDietType = true;
+      if (vegOnly && !mess.is_vegetarian) {
+        matchesDietType = false;
+      }
+      if (nonVegOnly && !mess.is_non_vegetarian) {
+        matchesDietType = false;
+      }
+      
+      // Rating filter
+      const messRating = getMessRating(mess.id);
+      const matchesRating = messRating >= minRating;
+      
+      return matchesSearch && matchesPrice && matchesDistance && matchesDietType && matchesRating;
+    })
     .sort((a, b) => {
       if (userLocation) {
         const distA = calculateDistance(userLocation.lat, userLocation.lng, a.latitude, a.longitude);
@@ -131,6 +218,8 @@ const Discover = () => {
 
   const viewMessDetails = (messId: string) => {
     setIsNavigating(true);
+    
+    console.log("Navigating to mess details:", messId);
     
     if (!user) {
       toast({
@@ -170,7 +259,7 @@ const Discover = () => {
             Discover affordable, quality meal options near your location. Browse through available mess services and find the perfect fit for your dietary preferences and budget.
           </p>
 
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 max-w-xl mx-auto">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 max-w-xl mx-auto mb-4">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -186,7 +275,32 @@ const Discover = () => {
               Use Current Location
             </Button>
           </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center text-[#8B4513]"
+          >
+            <SlidersHorizontal className="h-4 w-4 mr-2" />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </Button>
         </div>
+
+        <MessFilters 
+          priceRange={priceRange}
+          setPriceRange={setPriceRange}
+          maxDistance={maxDistance}
+          setMaxDistance={setMaxDistance}
+          vegOnly={vegOnly}
+          setVegOnly={setVegOnly}
+          nonVegOnly={nonVegOnly}
+          setNonVegOnly={setNonVegOnly}
+          minRating={minRating}
+          setMinRating={setMinRating}
+          resetFilters={resetFilters}
+          isOpen={showFilters}
+          setIsOpen={setShowFilters}
+        />
 
         {loading ? (
           <div className="flex justify-center items-center py-12">
@@ -198,90 +312,91 @@ const Discover = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMessServices.length > 0 ? (
-              filteredMessServices.map((mess) => (
-                <Card key={mess.id} className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow duration-300 border border-[#C4A484]/30">
-                  <div className="h-48 bg-muted relative">
-                    <img
-                      src="/placeholder.svg"
-                      alt={mess.name}
-                      className="w-full h-full object-cover"
-                      onLoad={(e) => {
-                        // Load mess image if available
-                        const fetchMessImage = async () => {
-                          const { data } = await supabase
-                            .from('mess_images')
-                            .select('image_url')
-                            .eq('mess_id', mess.id)
-                            .eq('is_primary', true)
-                            .single();
-                          
-                          if (data) {
-                            (e.target as HTMLImageElement).src = data.image_url;
-                          }
-                        };
-                        fetchMessImage();
-                      }}
-                    />
-                    {userLocation && (
-                      <span className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {calculateDistance(
-                          userLocation.lat,
-                          userLocation.lng,
-                          mess.latitude,
-                          mess.longitude
-                        ).toFixed(1)} km away
-                      </span>
-                    )}
-                  </div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl text-[#5C2C0C]">{mess.name}</CardTitle>
-                    <CardDescription className="flex items-center">
-                      <MapPin className="h-3 w-3 mr-1 text-gray-500" />
-                      {mess.address}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow pb-2">
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                      {mess.description || "No description available."}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {mess.is_vegetarian && (
-                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                          <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
-                          Veg
+              filteredMessServices.map((mess) => {
+                const distance = userLocation ? 
+                  calculateDistance(userLocation.lat, userLocation.lng, mess.latitude, mess.longitude) : null;
+                const rating = getMessRating(mess.id);
+                
+                return (
+                  <Card key={mess.id} className="overflow-hidden h-full flex flex-col hover:shadow-lg transition-shadow duration-300 border border-[#C4A484]/30">
+                    <div className="h-48 bg-muted relative">
+                      <img
+                        src="/placeholder.svg"
+                        alt={mess.name}
+                        className="w-full h-full object-cover"
+                        onLoad={(e) => {
+                          // Load mess image if available
+                          const fetchMessImage = async () => {
+                            const { data } = await supabase
+                              .from('mess_images')
+                              .select('image_url')
+                              .eq('mess_id', mess.id)
+                              .eq('is_primary', true)
+                              .single();
+                            
+                            if (data) {
+                              (e.target as HTMLImageElement).src = data.image_url;
+                            }
+                          };
+                          fetchMessImage();
+                        }}
+                      />
+                      {distance !== null && (
+                        <span className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {distance.toFixed(1)} km away
                         </span>
                       )}
-                      {mess.is_non_vegetarian && (
-                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                          <span className="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
-                          Non-Veg
-                        </span>
-                      )}
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        ₹{mess.price_monthly}/month
-                      </span>
-                      <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                        <Star className="h-3 w-3 mr-1 fill-amber-500 stroke-amber-500" />
-                        4.5
-                      </span>
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      onClick={() => viewMessDetails(mess.id)} 
-                      className="w-full bg-[#8B4513] hover:bg-[#5C2C0C] text-white"
-                      disabled={isNavigating}
-                    >
-                      View Details
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xl text-[#5C2C0C]">{mess.name}</CardTitle>
+                      <CardDescription className="flex items-center">
+                        <MapPin className="h-3 w-3 mr-1 text-gray-500" />
+                        {mess.address}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow pb-2">
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                        {mess.description || "No description available."}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {mess.is_vegetarian && (
+                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                            <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+                            Veg
+                          </span>
+                        )}
+                        {mess.is_non_vegetarian && (
+                          <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                            <span className="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
+                            Non-Veg
+                          </span>
+                        )}
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          ₹{mess.price_monthly}/month
+                        </span>
+                        <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                          <Star className="h-3 w-3 mr-1 fill-amber-500 stroke-amber-500" />
+                          {rating.toFixed(1)}
+                        </span>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        onClick={() => viewMessDetails(mess.id)} 
+                        className="w-full bg-[#8B4513] hover:bg-[#5C2C0C] text-white"
+                        disabled={isNavigating}
+                      >
+                        View Details
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })
             ) : (
-              <div className="col-span-3 text-center py-12 bg-white/50 rounded-lg border border-[#C4A484]/20">
+              <div className="col-span-full text-center py-12 bg-white/50 rounded-lg border border-[#C4A484]/20">
                 <h3 className="text-lg font-medium text-[#5C2C0C]">No mess services found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or location.</p>
+                <p className="text-muted-foreground">Try adjusting your search criteria or filters.</p>
               </div>
             )}
           </div>
