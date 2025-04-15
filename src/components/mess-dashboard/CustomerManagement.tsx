@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -154,85 +153,40 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
       setIsSubmitting(true);
       setError(null);
       
-      // Create a new user profile first
-      const { data: newProfile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          first_name: values.first_name,
-          last_name: values.last_name,
-          role: 'student'
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        // If error contains "violates foreign key constraint", it means we need a different approach
-        if (profileError.message.includes('violates foreign key constraint')) {
-          toast({
-            title: 'Error',
-            description: 'Unable to create profile. Using a different approach...',
-            variant: 'destructive',
-          });
-          
-          // Generate a random profile ID
-          const randomProfileId = crypto.randomUUID();
-          
-          // Create the subscription directly with the random ID
-          const { data: subscription, error: subscriptionError } = await supabase
-            .from('subscriptions')
-            .insert({
-              student_id: randomProfileId,
-              mess_id: messId,
-              status: 'active',
-              start_date: new Date().toISOString().split('T')[0],
-              end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            })
-            .select();
-            
-          if (subscriptionError) {
-            throw subscriptionError;
-          }
-          
-          // Create profile with the same ID
-          await supabase
-            .rpc('create_profile_with_id', { 
-              profile_id: randomProfileId,
-              first_name_val: values.first_name,
-              last_name_val: values.last_name,
-              role_val: 'student'
-            });
-            
-          toast({
-            title: 'Success',
-            description: 'Customer added successfully',
-          });
-          
-          setOpenDialog(false);
-          form.reset();
-          fetchCustomers();
-          return;
-        }
-        
-        throw profileError;
-      }
-
-      if (!newProfile) {
-        throw new Error('Failed to create profile');
-      }
-
-      // Now create a subscription for this profile
-      const { error: subscriptionError } = await supabase
+      // Generate a random profile ID
+      const randomProfileId = crypto.randomUUID();
+      
+      // Create a subscription first with the random ID
+      const { data: subscription, error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
-          student_id: newProfile.id,
+          student_id: randomProfileId,
           mess_id: messId,
           status: 'active',
           start_date: new Date().toISOString().split('T')[0],
           end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        });
+        })
+        .select();
+        
+      if (subscriptionError) {
+        throw subscriptionError;
+      }
 
-      if (subscriptionError) throw subscriptionError;
+      // Call the create_profile_with_id RPC function using the REST API
+      const { error: rpcError } = await supabase.rpc(
+        'create_profile_with_id',
+        { 
+          profile_id: randomProfileId,
+          first_name_val: values.first_name,
+          last_name_val: values.last_name,
+          role_val: 'student'
+        }
+      );
 
+      if (rpcError) {
+        throw rpcError;
+      }
+      
       toast({
         title: 'Success',
         description: 'Customer added successfully',
