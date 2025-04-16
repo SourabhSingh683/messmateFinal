@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { MessService } from '@/types/database';
-import { ChevronLeft, MapPin, Search, Star, Loader, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, MapPin, Search, Star, Loader, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import MessFilters from '@/components/discover/MessFilters';
 
 const Discover = () => {
@@ -19,6 +19,7 @@ const Discover = () => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -120,19 +121,31 @@ const Discover = () => {
   const fetchMessServices = async () => {
     try {
       setLoading(true);
+      setError(null);
       console.log("Fetching mess services");
+      
+      // Fixed direct query to mess_services table
       const { data, error } = await supabase
         .from('mess_services')
         .select('*');
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching mess services:", error);
+        setError(error.message);
+        throw error;
+      }
       
-      if (data) {
-        console.log("Fetched mess services:", data.length);
+      console.log("Fetched mess services:", data);
+      if (data && data.length > 0) {
         setMessServices(data);
+      } else {
+        console.log("No mess services found");
+        // Setting empty array instead of null
+        setMessServices([]);
       }
     } catch (error: any) {
       console.error("Error fetching mess services:", error.message);
+      setError(error.message);
       toast({
         title: "Failed to load mess services",
         description: error.message,
@@ -238,6 +251,10 @@ const Discover = () => {
     }, 100);
   };
 
+  const handleRefresh = () => {
+    fetchMessServices();
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
@@ -270,20 +287,32 @@ const Discover = () => {
                 className="pl-10"
               />
             </div>
-            <Button onClick={getUserLocation} variant="outline">
+            <Button onClick={getUserLocation} variant="outline" className="flex-shrink-0">
               <MapPin className="h-4 w-4 mr-2" />
               Use Current Location
             </Button>
           </div>
           
-          <Button 
-            variant="outline" 
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center text-[#8B4513]"
-          >
-            <SlidersHorizontal className="h-4 w-4 mr-2" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
-          </Button>
+          <div className="flex space-x-2 justify-center">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center text-[#8B4513]"
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              className="flex items-center text-[#8B4513]"
+              disabled={loading}
+            >
+              <Loader className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <MessFilters 
@@ -309,6 +338,15 @@ const Discover = () => {
               <p className="text-muted-foreground">Loading mess services...</p>
             </div>
           </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-lg border border-[#C4A484]/20">
+            <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+            <h3 className="text-xl font-medium text-[#5C2C0C] mb-2">Error Loading Mess Services</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={handleRefresh} variant="default" className="bg-[#8B4513] hover:bg-[#5C2C0C]">
+              Try Again
+            </Button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMessServices.length > 0 ? (
@@ -332,7 +370,7 @@ const Discover = () => {
                               .select('image_url')
                               .eq('mess_id', mess.id)
                               .eq('is_primary', true)
-                              .single();
+                              .maybeSingle();
                             
                             if (data) {
                               (e.target as HTMLImageElement).src = data.image_url;
@@ -397,6 +435,9 @@ const Discover = () => {
               <div className="col-span-full text-center py-12 bg-white/50 rounded-lg border border-[#C4A484]/20">
                 <h3 className="text-lg font-medium text-[#5C2C0C]">No mess services found</h3>
                 <p className="text-muted-foreground">Try adjusting your search criteria or filters.</p>
+                <Button onClick={handleRefresh} className="mt-4 bg-[#8B4513] hover:bg-[#5C2C0C]">
+                  Refresh Listing
+                </Button>
               </div>
             )}
           </div>

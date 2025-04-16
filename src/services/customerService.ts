@@ -66,32 +66,32 @@ export const addCustomer = async (
   mobile: string,
   email?: string
 ): Promise<void> => {
-  const profileId = crypto.randomUUID();
-  
-  // First create the profile with all the customer details
+  // First create the profile directly in the profiles table
   try {
-    // Create profile using the database function
-    const result = await fetchFromSupabase(`/rest/v1/rpc/create_customer_profile`, {
-      method: 'POST',
-      body: JSON.stringify({
-        profile_id: profileId,
-        first_name_val: firstName,
-        last_name_val: lastName,
-        address_val: address,
-        mobile_val: mobile,
-        email_val: email || null,
-        role_val: 'student'
-      })
-    });
+    // Create new UUID for the profile
+    const profileId = crypto.randomUUID();
     
-    console.log('Profile creation result:', result);
-  } catch (error: any) {
-    console.error('Failed to create profile:', error);
-    throw new Error(error.message || 'Failed to create profile');
-  }
-  
-  // Then create the subscription linking the customer to the mess
-  try {
+    // Insert directly into profiles table
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: profileId,
+        first_name: firstName,
+        last_name: lastName,
+        address: address,
+        mobile: mobile,
+        email: email || null,
+        role: 'student'
+      });
+    
+    if (profileError) {
+      console.error('Failed to create profile:', profileError);
+      throw profileError;
+    }
+    
+    console.log('Profile created successfully with ID:', profileId);
+    
+    // Then create the subscription linking the customer to the mess
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .insert({
@@ -106,9 +106,11 @@ export const addCustomer = async (
       console.error('Failed to create subscription:', subscriptionError);
       throw subscriptionError;
     }
+    
+    console.log('Subscription created successfully');
   } catch (error: any) {
-    console.error('Failed to create subscription:', error);
-    throw new Error(error.message || 'Failed to create subscription');
+    console.error('Error in addCustomer:', error);
+    throw new Error(error.message || 'Failed to create customer');
   }
 };
 

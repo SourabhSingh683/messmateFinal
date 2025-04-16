@@ -54,7 +54,7 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
       setIsSubmitting(true);
       setError(null);
       
-      console.log('Adding customer with data:', values);
+      console.log('Adding customer with data:', values, 'to mess ID:', messId);
       
       await addCustomer(
         messId, 
