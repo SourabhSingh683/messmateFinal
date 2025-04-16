@@ -1,5 +1,5 @@
 
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -20,11 +20,9 @@ import Pricing from '@/pages/Pricing';
 import Discover from '@/pages/Discover';
 
 function App() {
-  const navigate = useNavigate();
-  
   return (
     <ThemeProvider>
-      <AuthProvider onAuthSuccess={(path) => navigate(path)}>
+      <AuthProvider onAuthSuccess={(path) => window.location.href = path}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -35,7 +33,7 @@ function App() {
           <Route path="/edit-mess/:id" element={<EditMess />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/student-dashboard" element={<StudentDashboard />} />
-          <Route path="/mess/:id" element={<MessDetails />} />
+          <Route path="/mess/:messId" element={<MessDetails />} />
           <Route path="/about" element={<About />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/discover" element={<Discover />} />

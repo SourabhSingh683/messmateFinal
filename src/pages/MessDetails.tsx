@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,17 +32,17 @@ const MessDetails = () => {
 
   // This effect runs once to fetch the main mess details
   useEffect(() => {
+    // If no messId is provided, redirect to discover page
+    if (!messId) {
+      navigate('/discover');
+      return;
+    }
+
     const fetchData = async () => {
-      if (!messId) {
-        setError("No mess ID provided");
-        setLoading(false);
-        return;
-      }
-      
       try {
+        console.log("Fetching mess with ID:", messId);
         setLoading(true);
         setError(null);
-        console.log("Fetching mess with ID:", messId);
         
         const { data: messData, error: messError } = await supabase
           .from('mess_services')
@@ -88,7 +89,7 @@ const MessDetails = () => {
     };
 
     fetchData();
-  }, [messId, toast]);
+  }, [messId, toast, navigate]);
 
   const fetchPlans = async (id: string) => {
     try {
@@ -263,7 +264,7 @@ const MessDetails = () => {
   // Show error state if there's an error
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col animate-fade-in">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-12 text-center">
           <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border animate-fade-in">

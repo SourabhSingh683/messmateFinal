@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CustomerProvider } from '@/context/CustomerContext';
 import { fetchCustomers } from '@/services/customerService';
 import CustomerList from './customer/CustomerList';
@@ -29,13 +30,22 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // This will hide the initial loading state after a timeout
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
     }, 1000);
     
     return () => clearTimeout(timer);
   }, []);
+
+  const handleAddCustomerSuccess = () => {
+    setOpenDialog(false);
+    setError(null);
+  };
+
+  const handleError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
 
   return (
     <CustomerProvider 
@@ -47,7 +57,7 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
           <h2 className="text-2xl font-bold tracking-tight">Customers</h2>
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2 transition-all duration-300 hover:scale-105">
+              <Button className="flex items-center gap-2 transition-all duration-300 hover:scale-105 bg-[#8B4513] hover:bg-[#5C2C0C]">
                 <UserPlus className="h-4 w-4" />
                 <span>Add Customer</span>
               </Button>
@@ -60,12 +70,14 @@ const CustomerManagement = ({ messId }: CustomerManagementProps) => {
                 </DialogDescription>
               </DialogHeader>
               {error && (
-                <div className="bg-destructive/10 p-3 rounded-md mb-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
-                  <div className="text-sm text-destructive">{error}</div>
-                </div>
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {error}
+                  </AlertDescription>
+                </Alert>
               )}
-              <CustomerForm onSuccess={() => setOpenDialog(false)} />
+              <CustomerForm onSuccess={handleAddCustomerSuccess} />
             </DialogContent>
           </Dialog>
         </div>

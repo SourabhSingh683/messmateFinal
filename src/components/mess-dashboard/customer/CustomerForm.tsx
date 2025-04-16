@@ -3,8 +3,6 @@ import React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle } from 'lucide-react';
-import { Spinner } from "@/components/ui/spinner";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,6 +20,7 @@ import {
 import { useCustomers } from '@/context/CustomerContext';
 import { addCustomer } from '@/services/customerService';
 import { useToast } from '@/hooks/use-toast';
+import { Spinner } from "@/components/ui/spinner";
 
 const customerSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
@@ -55,6 +54,8 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
       setIsSubmitting(true);
       setError(null);
       
+      console.log('Adding customer with data:', values);
+      
       await addCustomer(
         messId, 
         values.first_name, 
@@ -71,7 +72,7 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
       });
       
       form.reset();
-      refetchCustomers();
+      await refetchCustomers();
       onSuccess();
     } catch (error: any) {
       console.error('Error adding customer:', error.message);

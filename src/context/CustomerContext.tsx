@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { Customer } from '@/services/customerService';
 
 interface CustomerContextType {
@@ -44,11 +44,13 @@ export const CustomerProvider = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const refetchCustomers = async () => {
+  const refetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching customers for mess:', messId);
       const data = await fetchCustomersFunction(messId);
+      console.log('Fetched customers:', data);
       setCustomers(data);
     } catch (error: any) {
       console.error('Error fetching customers:', error.message);
@@ -56,7 +58,12 @@ export const CustomerProvider = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [messId, fetchCustomersFunction]);
+
+  // Initial fetch 
+  React.useEffect(() => {
+    refetchCustomers();
+  }, [refetchCustomers]);
 
   const value = {
     customers,

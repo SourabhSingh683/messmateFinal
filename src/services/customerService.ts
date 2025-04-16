@@ -36,6 +36,7 @@ export const fetchCustomers = async (messId: string): Promise<Customer[]> => {
     .eq('mess_id', messId);
 
   if (error) {
+    console.error('Error fetching customers:', error);
     throw error;
   }
 
@@ -65,14 +66,15 @@ export const addCustomer = async (
   mobile: string,
   email?: string
 ): Promise<void> => {
-  const randomProfileId = crypto.randomUUID();
+  const profileId = crypto.randomUUID();
   
   // First create the profile with all the customer details
   try {
-    await fetchFromSupabase(`/rest/v1/rpc/create_customer_profile`, {
+    // Create profile using the database function
+    const result = await fetchFromSupabase(`/rest/v1/rpc/create_customer_profile`, {
       method: 'POST',
       body: JSON.stringify({
-        profile_id: randomProfileId,
+        profile_id: profileId,
         first_name_val: firstName,
         last_name_val: lastName,
         address_val: address,
@@ -81,7 +83,10 @@ export const addCustomer = async (
         role_val: 'student'
       })
     });
+    
+    console.log('Profile creation result:', result);
   } catch (error: any) {
+    console.error('Failed to create profile:', error);
     throw new Error(error.message || 'Failed to create profile');
   }
   
@@ -90,7 +95,7 @@ export const addCustomer = async (
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .insert({
-        student_id: randomProfileId,
+        student_id: profileId,
         mess_id: messId,
         status: 'active',
         start_date: new Date().toISOString().split('T')[0],
@@ -98,9 +103,11 @@ export const addCustomer = async (
       });
       
     if (subscriptionError) {
+      console.error('Failed to create subscription:', subscriptionError);
       throw subscriptionError;
     }
   } catch (error: any) {
+    console.error('Failed to create subscription:', error);
     throw new Error(error.message || 'Failed to create subscription');
   }
 };
