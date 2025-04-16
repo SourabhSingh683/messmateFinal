@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -11,11 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapPin, Star, ChevronLeft, AlertCircle } from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MessDetails = () => {
   const { messId } = useParams<{ messId: string }>();
   const [mess, setMess] = useState<MessService | null>(null);
   const [loading, setLoading] = useState(true);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [imagesLoading, setImagesLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [schedule, setSchedule] = useState<MealSchedule[]>([]);
   const [images, setImages] = useState<string[]>([]);
@@ -24,11 +29,23 @@ const MessDetails = () => {
   const { user, profile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
+  // This effect runs once to fetch the main mess details
   useEffect(() => {
     if (messId) {
       fetchMessDetails();
     }
   }, [messId]);
+
+  // Separate effect to fetch additional data after mess details are loaded
+  useEffect(() => {
+    if (mess?.id) {
+      Promise.all([
+        fetchPlans(mess.id),
+        fetchSchedule(mess.id),
+        fetchImages(mess.id)
+      ]);
+    }
+  }, [mess?.id]);
 
   const fetchMessDetails = async () => {
     try {
@@ -64,15 +81,7 @@ const MessDetails = () => {
       
       console.log("Mess data received:", messData);
       setMess(messData);
-      
-      await Promise.all([
-        fetchPlans(messData.id),
-        fetchSchedule(messData.id),
-        fetchImages(messData.id)
-      ]);
-      
       setLoading(false);
-      
     } catch (error: any) {
       console.error("Error fetching mess details:", error.message);
       toast({
@@ -87,6 +96,7 @@ const MessDetails = () => {
 
   const fetchPlans = async (id: string) => {
     try {
+      setPlansLoading(true);
       console.log("Fetching plans for mess ID:", id);
       const { data, error } = await supabase
         .from('subscription_plans')
@@ -106,11 +116,14 @@ const MessDetails = () => {
       }
     } catch (error: any) {
       console.error("Error fetching subscription plans:", error.message);
+    } finally {
+      setPlansLoading(false);
     }
   };
 
   const fetchSchedule = async (id: string) => {
     try {
+      setScheduleLoading(true);
       console.log("Fetching schedule for mess ID:", id);
       const { data, error } = await supabase
         .from('meal_schedule')
@@ -129,11 +142,14 @@ const MessDetails = () => {
       }
     } catch (error: any) {
       console.error("Error fetching meal schedule:", error.message);
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
   const fetchImages = async (id: string) => {
     try {
+      setImagesLoading(true);
       console.log("Fetching images for mess ID:", id);
       const { data, error } = await supabase
         .from('mess_images')
@@ -151,6 +167,8 @@ const MessDetails = () => {
       }
     } catch (error: any) {
       console.error("Error fetching mess images:", error.message);
+    } finally {
+      setImagesLoading(false);
     }
   };
 
@@ -246,21 +264,7 @@ const MessDetails = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow container mx-auto flex justify-center items-center">
-          <div className="flex flex-col items-center">
-            <Spinner className="h-12 w-12 mb-4" />
-            <p className="text-muted-foreground">Loading mess details...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
+  // Show error state if there's an error
   if (error) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -273,6 +277,55 @@ const MessDetails = () => {
             <Button onClick={() => navigate('/discover')}>
               Back to Discover
             </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show Navbar and loading skeleton during main data fetch
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container mx-auto px-4 py-8 animate-fade-in">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/discover')}
+            className="mb-4 flex items-center"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Discover
+          </Button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <Skeleton className="h-64 md:h-96 w-full mb-6 rounded-lg" />
+              <Skeleton className="h-10 w-2/3 mb-2" />
+              <Skeleton className="h-6 w-1/2 mb-4" />
+              <div className="flex gap-2 mb-4">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+              <Skeleton className="h-6 w-1/3 mb-2" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            
+            <div>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-8 w-2/3 mb-2" />
+                  <Skeleton className="h-6 w-full" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </main>
         <Footer />
@@ -312,12 +365,12 @@ const MessDetails = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow container mx-auto px-4 py-8 animate-fade-in">
         <div className="mb-6">
           <Button 
             variant="outline" 
             onClick={() => navigate('/discover')}
-            className="mb-4 flex items-center"
+            className="mb-4 flex items-center hover:scale-105 transition-transform duration-300"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Discover
@@ -325,8 +378,10 @@ const MessDetails = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
-              <div className="rounded-lg overflow-hidden mb-6 h-64 md:h-96 bg-muted">
-                {images.length > 0 ? (
+              <div className="rounded-lg overflow-hidden mb-6 h-64 md:h-96 bg-muted shadow-lg transition-transform duration-500 hover:scale-[1.01]">
+                {imagesLoading ? (
+                  <Skeleton className="w-full h-full" />
+                ) : images.length > 0 ? (
                   <img
                     src={images[0]}
                     alt={mess.name}
@@ -339,10 +394,10 @@ const MessDetails = () => {
                 )}
               </div>
               
-              {images.length > 1 && (
+              {!imagesLoading && images.length > 1 && (
                 <div className="grid grid-cols-4 gap-2 mb-6">
                   {images.slice(0, 4).map((img, index) => (
-                    <div key={index} className="rounded-lg overflow-hidden h-20 bg-muted">
+                    <div key={index} className="rounded-lg overflow-hidden h-20 bg-muted shadow-md transition-all duration-300 hover:scale-105">
                       <img
                         src={img}
                         alt={`${mess.name} ${index + 1}`}
@@ -353,13 +408,13 @@ const MessDetails = () => {
                 </div>
               )}
               
-              <h1 className="text-3xl font-bold mb-2">{mess.name}</h1>
-              <p className="text-muted-foreground mb-4 flex items-center">
+              <h1 className="text-3xl font-bold mb-2 animate-fade-in">{mess.name}</h1>
+              <p className="text-muted-foreground mb-4 flex items-center animate-fade-in">
                 <MapPin className="h-4 w-4 mr-1" />
                 {mess.address}
               </p>
               
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 animate-fade-in">
                 {mess.is_vegetarian && (
                   <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Vegetarian</span>
                 )}
@@ -371,7 +426,7 @@ const MessDetails = () => {
                 </span>
               </div>
               
-              <div className="mb-6">
+              <div className="mb-6 animate-fade-in">
                 <h2 className="text-xl font-semibold mb-2">About This Mess</h2>
                 <p className="text-muted-foreground">
                   {mess.description || "No description available for this mess service."}
@@ -379,17 +434,25 @@ const MessDetails = () => {
               </div>
             </div>
             
-            <div>
-              <Card>
+            <div className="animate-fade-in">
+              <Card className="transition-all duration-300 hover:shadow-lg border-t-2 border-t-[#8B4513]">
                 <CardHeader>
                   <CardTitle>Subscription Plans</CardTitle>
                   <CardDescription>Choose a plan that suits your needs</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {plans.length > 0 ? (
+                  {plansLoading ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-32 w-full" />
+                      <Skeleton className="h-32 w-full" />
+                    </div>
+                  ) : plans.length > 0 ? (
                     <div className="space-y-4">
                       {plans.map((plan) => (
-                        <div key={plan.id} className="border rounded-lg p-4">
+                        <div 
+                          key={plan.id} 
+                          className="border rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:border-[#8B4513]/50"
+                        >
                           <h3 className="font-semibold">{plan.name}</h3>
                           <p className="text-muted-foreground text-sm mb-2">{plan.description}</p>
                           <div className="flex justify-between items-center mt-4">
@@ -398,7 +461,7 @@ const MessDetails = () => {
                           </div>
                           <Button 
                             onClick={() => handleSubscribe(plan.id)} 
-                            className="w-full mt-4"
+                            className="w-full mt-4 bg-[#8B4513] hover:bg-[#5C2C0C] transform hover:scale-[1.02] transition-all duration-300"
                           >
                             Subscribe
                           </Button>
@@ -416,9 +479,18 @@ const MessDetails = () => {
             </div>
           </div>
           
-          <div className="mt-10">
+          <div className="mt-10 animate-fade-in">
             <h2 className="text-2xl font-bold mb-6">Meal Schedule</h2>
-            {Object.keys(scheduleByDay).length > 0 ? (
+            {scheduleLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full md:w-2/3" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Skeleton className="h-40 w-full" />
+                  <Skeleton className="h-40 w-full" />
+                  <Skeleton className="h-40 w-full" />
+                </div>
+              </div>
+            ) : Object.keys(scheduleByDay).length > 0 ? (
               <Tabs defaultValue={daysOrder.find(day => scheduleByDay[day]) || daysOrder[0]}>
                 <TabsList className="mb-4 flex-wrap">
                   {daysOrder.map(day => scheduleByDay[day] && (
@@ -434,7 +506,10 @@ const MessDetails = () => {
                       {scheduleByDay[day]
                         .sort((a, b) => a.start_time.localeCompare(b.start_time))
                         .map((meal) => (
-                          <Card key={meal.id}>
+                          <Card 
+                            key={meal.id}
+                            className="transition-all duration-300 hover:shadow-md hover:border-[#8B4513]/50"
+                          >
                             <CardHeader>
                               <CardTitle>{meal.meal_type}</CardTitle>
                               <CardDescription>
