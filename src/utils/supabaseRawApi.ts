@@ -215,12 +215,28 @@ export const FeedbackApi = {
 
 export const CustomersApi = {
   getByMessId: (messId: string) => 
-    fetchFromSupabase<any[]>(`/rest/v1/subscriptions?mess_id=eq.${messId}&select=*,profiles:profiles(id,first_name,last_name)&order=created_at.desc`),
+    fetchFromSupabase<any[]>(`/rest/v1/subscriptions?mess_id=eq.${messId}&select=*,profiles:profiles(id,first_name,last_name,address,mobile,email)&order=created_at.desc`),
 
   addCustomer: (data: any) => 
     fetchFromSupabase<any>(`/rest/v1/subscriptions`, {
       method: 'POST',
       body: JSON.stringify(data),
+      headers: { "Prefer": "return=representation" }
+    }),
+    
+  createProfile: (profileData: any) =>
+    fetchFromSupabase<any>(`/rest/v1/rpc/create_customer_profile`, {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+      headers: { "Prefer": "return=representation" }
+    }),
+};
+
+export const CreateMessOwnerDashboard = {
+  // Add a function to check for RLS policies on subscriptions table
+  checkSubscriptionPolicies: () =>
+    fetchFromSupabase<any>(`/rest/v1/rpc/check_subscription_policies`, {
+      method: 'POST',
       headers: { "Prefer": "return=representation" }
     }),
 };

@@ -18,6 +18,7 @@ const MessDetails = () => {
   const { messId } = useParams<{ messId: string }>();
   const [mess, setMess] = useState<MessService | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataFetched, setDataFetched] = useState(false);
   const [plansLoading, setPlansLoading] = useState(true);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [imagesLoading, setImagesLoading] = useState(true);
@@ -31,68 +32,66 @@ const MessDetails = () => {
 
   // This effect runs once to fetch the main mess details
   useEffect(() => {
-    if (messId) {
-      fetchMessDetails();
-    }
+    const fetchData = async () => {
+      if (messId) {
+        try {
+          setLoading(true);
+          setError(null);
+          console.log("Fetching mess with ID:", messId);
+          
+          if (!messId) {
+            setError("No mess ID provided");
+            setLoading(false);
+            return;
+          }
+          
+          const { data: messData, error: messError } = await supabase
+            .from('mess_services')
+            .select('*')
+            .eq('id', messId)
+            .maybeSingle();
+
+          if (messError) {
+            console.error("Error fetching mess details:", messError.message);
+            setError(messError.message);
+            setLoading(false);
+            return;
+          }
+          
+          if (!messData) {
+            console.log("No mess data found");
+            setError("Mess service not found");
+            setLoading(false);
+            return;
+          }
+          
+          console.log("Mess data received:", messData);
+          setMess(messData);
+          setDataFetched(true);
+          
+          // Fetch additional data
+          await Promise.all([
+            fetchPlans(messData.id),
+            fetchSchedule(messData.id),
+            fetchImages(messData.id)
+          ]);
+          
+          setLoading(false);
+        } catch (error: any) {
+          console.error("Error fetching mess details:", error.message);
+          toast({
+            title: "Failed to load mess details",
+            description: error.message,
+            variant: "destructive"
+          });
+          setError(error.message);
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
   }, [messId]);
-
-  // Separate effect to fetch additional data after mess details are loaded
-  useEffect(() => {
-    if (mess?.id) {
-      Promise.all([
-        fetchPlans(mess.id),
-        fetchSchedule(mess.id),
-        fetchImages(mess.id)
-      ]);
-    }
-  }, [mess?.id]);
-
-  const fetchMessDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("Fetching mess with ID:", messId);
-      
-      if (!messId) {
-        setError("No mess ID provided");
-        setLoading(false);
-        return;
-      }
-      
-      const { data: messData, error: messError } = await supabase
-        .from('mess_services')
-        .select('*')
-        .eq('id', messId)
-        .maybeSingle();
-
-      if (messError) {
-        console.error("Error fetching mess details:", messError.message);
-        setError(messError.message);
-        setLoading(false);
-        return;
-      }
-      
-      if (!messData) {
-        console.log("No mess data found");
-        setError("Mess service not found");
-        setLoading(false);
-        return;
-      }
-      
-      console.log("Mess data received:", messData);
-      setMess(messData);
-      setLoading(false);
-    } catch (error: any) {
-      console.error("Error fetching mess details:", error.message);
-      toast({
-        title: "Failed to load mess details",
-        description: error.message,
-        variant: "destructive"
-      });
-      setError(error.message);
-      setLoading(false);
-    }
-  };
 
   const fetchPlans = async (id: string) => {
     try {
@@ -270,11 +269,14 @@ const MessDetails = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-12 text-center">
-          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border">
-            <AlertCircle className="h-16 w-16 mx-auto mb-4 text-destructive" />
+          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border animate-fade-in">
+            <AlertCircle className="h-16 w-16 mx-auto mb-4 text-destructive animate-pulse" />
             <h1 className="text-3xl font-bold mb-4">Error Loading Mess Details</h1>
             <p className="text-muted-foreground mb-6">{error}</p>
-            <Button onClick={() => navigate('/discover')}>
+            <Button 
+              onClick={() => navigate('/discover')} 
+              className="bg-[#8B4513] hover:bg-[#5C2C0C] transition-all duration-300 transform hover:scale-105"
+            >
               Back to Discover
             </Button>
           </div>
@@ -285,7 +287,7 @@ const MessDetails = () => {
   }
 
   // Show Navbar and loading skeleton during main data fetch
-  if (loading) {
+  if (loading && !dataFetched) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -338,11 +340,14 @@ const MessDetails = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-12 text-center">
-          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border">
+          <div className="max-w-lg mx-auto bg-card p-6 rounded-lg shadow-md border animate-fade-in">
             <AlertCircle className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
             <h1 className="text-3xl font-bold mb-4">Mess Not Found</h1>
             <p className="text-muted-foreground mb-6">The mess service you're looking for doesn't exist or has been removed.</p>
-            <Button onClick={() => navigate('/discover')}>
+            <Button 
+              onClick={() => navigate('/discover')}
+              className="bg-[#8B4513] hover:bg-[#5C2C0C] transition-all duration-300 transform hover:scale-105"
+            >
               Back to Discover
             </Button>
           </div>
@@ -416,12 +421,12 @@ const MessDetails = () => {
               
               <div className="flex gap-2 mb-4 animate-fade-in">
                 {mess.is_vegetarian && (
-                  <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Vegetarian</span>
+                  <span className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded">Vegetarian</span>
                 )}
                 {mess.is_non_vegetarian && (
-                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">Non-Vegetarian</span>
+                  <span className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-xs font-medium px-2.5 py-0.5 rounded">Non-Vegetarian</span>
                 )}
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded">
                   ₹{mess.price_monthly}/month base price
                 </span>
               </div>
@@ -508,7 +513,7 @@ const MessDetails = () => {
                         .map((meal) => (
                           <Card 
                             key={meal.id}
-                            className="transition-all duration-300 hover:shadow-md hover:border-[#8B4513]/50"
+                            className="transition-all duration-300 hover:shadow-md hover:border-[#8B4513]/50 hover:scale-[1.02]"
                           >
                             <CardHeader>
                               <CardTitle>{meal.meal_type}</CardTitle>

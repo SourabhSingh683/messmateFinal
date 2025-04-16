@@ -26,7 +26,9 @@ import { useToast } from '@/hooks/use-toast';
 const customerSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
+  address: z.string().min(5, { message: 'Address must be at least 5 characters.' }),
+  mobile: z.string().min(10, { message: 'Please enter a valid mobile number.' }).max(15),
 });
 
 interface CustomerFormProps {
@@ -43,6 +45,8 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
       first_name: '',
       last_name: '',
       email: '',
+      address: '',
+      mobile: '',
     },
   });
 
@@ -51,11 +55,19 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
       setIsSubmitting(true);
       setError(null);
       
-      await addCustomer(messId, values.first_name, values.last_name);
+      await addCustomer(
+        messId, 
+        values.first_name, 
+        values.last_name, 
+        values.address, 
+        values.mobile, 
+        values.email || undefined
+      );
       
       toast({
         title: 'Success',
         description: 'Customer added successfully',
+        variant: 'default',
       });
       
       form.reset();
@@ -77,32 +89,63 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
-          name="first_name"
+          name="mobile"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name</FormLabel>
+              <FormLabel>Mobile Number</FormLabel>
               <FormControl>
-                <Input placeholder="John" {...field} />
+                <Input type="tel" placeholder="1234567890" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
-          name="last_name"
+          name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name</FormLabel>
+              <FormLabel>Address</FormLabel>
               <FormControl>
-                <Input placeholder="Doe" {...field} />
+                <Input placeholder="123 Main St, City" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -120,7 +163,11 @@ const CustomerForm = ({ onSuccess }: CustomerFormProps) => {
           )}
         />
         <DialogFooter>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="bg-[#8B4513] hover:bg-[#5C2C0C] transition-all duration-300"
+          >
             {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : null}
             {isSubmitting ? 'Adding...' : 'Add Customer'}
           </Button>
