@@ -1,15 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface Customer {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  created_at: string;
-  mess_id: string;
-  subscription_status: string;
-}
+import { Customer } from '@/services/customerService';
 
 interface CustomerContextType {
   customers: Customer[];

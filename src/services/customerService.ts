@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { fetchFromSupabase } from '@/utils/supabaseRawApi';
-import { useToast } from '@/hooks/use-toast';
 
 export interface Customer {
   id: string;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -33,65 +32,63 @@ const MessDetails = () => {
   // This effect runs once to fetch the main mess details
   useEffect(() => {
     const fetchData = async () => {
-      if (messId) {
-        try {
-          setLoading(true);
-          setError(null);
-          console.log("Fetching mess with ID:", messId);
-          
-          if (!messId) {
-            setError("No mess ID provided");
-            setLoading(false);
-            return;
-          }
-          
-          const { data: messData, error: messError } = await supabase
-            .from('mess_services')
-            .select('*')
-            .eq('id', messId)
-            .maybeSingle();
+      if (!messId) {
+        setError("No mess ID provided");
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching mess with ID:", messId);
+        
+        const { data: messData, error: messError } = await supabase
+          .from('mess_services')
+          .select('*')
+          .eq('id', messId)
+          .maybeSingle();
 
-          if (messError) {
-            console.error("Error fetching mess details:", messError.message);
-            setError(messError.message);
-            setLoading(false);
-            return;
-          }
-          
-          if (!messData) {
-            console.log("No mess data found");
-            setError("Mess service not found");
-            setLoading(false);
-            return;
-          }
-          
-          console.log("Mess data received:", messData);
-          setMess(messData);
-          setDataFetched(true);
-          
-          // Fetch additional data
-          await Promise.all([
-            fetchPlans(messData.id),
-            fetchSchedule(messData.id),
-            fetchImages(messData.id)
-          ]);
-          
+        if (messError) {
+          console.error("Error fetching mess details:", messError.message);
+          setError(messError.message);
           setLoading(false);
-        } catch (error: any) {
-          console.error("Error fetching mess details:", error.message);
-          toast({
-            title: "Failed to load mess details",
-            description: error.message,
-            variant: "destructive"
-          });
-          setError(error.message);
-          setLoading(false);
+          return;
         }
+        
+        if (!messData) {
+          console.log("No mess data found");
+          setError("Mess service not found");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Mess data received:", messData);
+        setMess(messData);
+        setDataFetched(true);
+        
+        // Fetch additional data
+        await Promise.all([
+          fetchPlans(messData.id),
+          fetchSchedule(messData.id),
+          fetchImages(messData.id)
+        ]);
+        
+      } catch (error: any) {
+        console.error("Error fetching mess details:", error.message);
+        toast({
+          title: "Failed to load mess details",
+          description: error.message,
+          variant: "destructive"
+        });
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [messId]);
+  }, [messId, toast]);
 
   const fetchPlans = async (id: string) => {
     try {

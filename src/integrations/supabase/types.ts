@@ -300,35 +300,44 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
           created_at: string
+          email: string | null
           first_name: string
           id: string
           last_name: string
           latitude: number | null
           longitude: number | null
+          mobile: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           first_name: string
           id: string
           last_name: string
           latitude?: number | null
           longitude?: number | null
+          mobile?: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
           last_name?: string
           latitude?: number | null
           longitude?: number | null
+          mobile?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -476,6 +485,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_subscription_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      create_customer_profile: {
+        Args: {
+          profile_id: string
+          first_name_val: string
+          last_name_val: string
+          address_val: string
+          mobile_val: string
+          email_val: string
+          role_val: string
+        }
+        Returns: undefined
+      }
       update_user_location: {
         Args: { user_id: string; user_latitude: number; user_longitude: number }
         Returns: undefined
